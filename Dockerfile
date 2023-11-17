@@ -1,6 +1,5 @@
 FROM ubuntu:22.04
 CMD bash
-
 # Install Ubuntu packages.
 # Please add packages in alphabetical order.
 ARG DEBIAN_FRONTEND=noninteractive
@@ -15,4 +14,5 @@ RUN apt-get -y update && \
       git \
       g++-12 \
       pkg-config \
-      zlib1g-dev
+      zlib1g-dev && \
+      unminimize

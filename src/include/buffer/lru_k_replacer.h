@@ -20,8 +20,31 @@
 
 #include "common/config.h"
 #include "common/macros.h"
-
+#include <memory>
 namespace bustub {
+/**
+ * 
+ * 
+*/
+template<class K, class V>
+class DoubleLinkedList{
+public:
+	
+public:
+	typedef DoubleLinkedList<K,V>::Node Node;
+  	class Node{
+		Node * pre_;
+		Node * next_;
+		K key_;
+		V value_;
+		Node(K k_, V v_);
+  	};
+public:
+	auto Insert(K key, V value) -> bool;
+	auto Remove(K key, V &value) -> bool;
+
+};
+
 
 /**
  * LRUKReplacer implements the LRU-k replacement policy.
