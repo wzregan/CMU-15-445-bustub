@@ -26,7 +26,6 @@ TEST(LRUKReplacerTest, DISABLED_SampleTest) {
   lru_replacer.RecordAccess(4);
   lru_replacer.RecordAccess(5);
   lru_replacer.RecordAccess(6);
-  lru_replacer.SetEvictable(1, true);
   lru_replacer.SetEvictable(2, true);
   lru_replacer.SetEvictable(3, true);
   lru_replacer.SetEvictable(4, true);
@@ -97,4 +96,42 @@ TEST(LRUKReplacerTest, DISABLED_SampleTest) {
   lru_replacer.Remove(1);
   ASSERT_EQ(0, lru_replacer.Size());
 }
+bustub::DoubleLinkedList<frame_id_t> l1;
+bustub::DoubleLinkedList<int> l2;
+
+TEST(DoubleLinkedListt, ENABLE_DoubleLinkedListSampleTest) {
+    DoubleLinkedList<frame_id_t> list;
+    list.InsertFront(1);
+    list.InsertFront(2);
+    list.InsertFront(3);
+    list.InsertFront(4);
+    EXPECT_EQ(list.Size(),4);
+    auto temp = list.head_->next_;
+    for (int i = 1; i < 5; i++){
+        EXPECT_EQ(temp->value,5-i);
+        temp = temp->next_;
+    }
+    frame_id_t id;
+    list.RemoveTail(&id);
+    EXPECT_EQ(id, 1);
+
+
+    DoubleLinkedList<frame_id_t> list2;
+    DoubleLinkedList<frame_id_t>::Node *n1 = new DoubleLinkedList<frame_id_t>::Node(1,4);
+    DoubleLinkedList<frame_id_t>::Node *n2 = new DoubleLinkedList<frame_id_t>::Node(2,3);
+    DoubleLinkedList<frame_id_t>::Node *n3 = new DoubleLinkedList<frame_id_t>::Node(3,2);
+    list2.InsertOrdered(n1);
+    list2.InsertOrdered(n2);
+    list2.InsertOrdered(n3);
+
+    temp = list2.head_->next_;
+    for (int i = 1; i < 4; i++){
+        std::cout<<temp->value<<"\n";
+        EXPECT_EQ(temp->value,4-i);
+        temp = temp->next_;
+    }
+
+}
+
+
 }  // namespace bustub

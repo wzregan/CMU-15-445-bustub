@@ -17,7 +17,7 @@
 #include <mutex>  // NOLINT
 #include <unordered_map>
 #include <vector>
-
+#include <set>
 #include "common/config.h"
 #include "common/macros.h"
 #include <memory>
@@ -26,25 +26,54 @@ namespace bustub {
  * 
  * 
 */
-template<class K, class V>
+template<class Key>
 class DoubleLinkedList{
 public:
-	
-public:
-	typedef DoubleLinkedList<K,V>::Node Node;
   	class Node{
+	public:
 		Node * pre_;
 		Node * next_;
-		K key_;
-		V value_;
-		Node(K k_, V v_);
+		Key value;
+		int visite_count{0};
+		Node(Key frame_id);
+		Node(Key frame_id, int vc);
+
   	};
 public:
-	auto Insert(K key, V value) -> bool;
-	auto Remove(K key, V &value) -> bool;
+	DoubleLinkedList();
+public:
+	Node * head_;
+	int size;
+	auto InsertFront(Key frame_id) -> bool;
+	auto InsertFrontNode(Node * temp) -> bool;
+	auto RemoveTail(Key *frame_id) -> bool;
+	auto RemoveNodeFromList(Node *node) -> bool;
 
+	inline int Size() { return size;}
+	auto InsertOrdered(Node *) -> bool;
+
+
+	~DoubleLinkedList();
 };
 
+class LRU_K{
+	typedef DoubleLinkedList<frame_id_t>::Node Node;
+	typedef DoubleLinkedList<frame_id_t> LRU_List;
+	typedef DoubleLinkedList<frame_id_t> History_List;
+	typedef std::unordered_map<frame_id_t, Node*> Map;
+	int capacity;
+	int k;
+
+	LRU_List lru_cache;
+	History_List history_cache;
+	Map history_map;
+	Map LRU_map;
+public:
+	LRU_K(int size, int K);
+	void access(frame_id_t id);
+
+	
+};
 
 /**
  * LRUKReplacer implements the LRU-k replacement policy.
@@ -162,6 +191,7 @@ class LRUKReplacer {
   [[maybe_unused]] size_t curr_size_{0};
   [[maybe_unused]] size_t replacer_size_;
   [[maybe_unused]] size_t k_;
+  std::set<frame_id_t> no_evictable_set_;
   std::mutex latch_;
 };
 
