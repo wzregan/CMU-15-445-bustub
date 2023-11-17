@@ -14,5 +14,5 @@ RUN apt-get -y update && \
       git \
       g++-12 \
       pkg-config \
-      zlib1g-dev && \
-      unminimize
+      zlib1g-dev
+RUN git clone https://github.com/wzregan/CMU-15-445-bustub.git
