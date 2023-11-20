@@ -69,6 +69,17 @@ auto bustub::DoubleLinkedList<Key>::InsertFrontNode(Node * temp) -> bool {
     return true; 
 }
 template<class Key>
+auto bustub::DoubleLinkedList<Key>::InsertTailNode(Node * temp) -> bool { 
+    head_->pre_->next_
+    temp->pre_ = head_->pre_;
+    head_->pre_ = temp;
+    temp->next_ = head_;
+    head_->next_ = temp;
+    temp->pre_ = head_;
+    size++;    
+    return true; 
+}
+template<class Key>
 auto bustub::DoubleLinkedList<Key>::RemoveTail(Key *frame_id) -> bool { 
     if (size==0){
         return false;
@@ -89,8 +100,23 @@ auto DoubleLinkedList<Key>::RemoveNodeFromList(Node *node) -> bool {
     }
     node->pre_->next_ = node->next_;
     node->next_->pre_ = node->pre_;
+    node->pre_=nullptr;
+    node->next_=nullptr;
     return true;
 }
+
+template <class Key>
+auto DoubleLinkedList<Key>::FindFirstEvictableNode() -> Node * {
+    auto temp = this->head_->next_;
+    while (temp!=this->head_){
+        if (temp->evictable){
+            return temp;
+        }
+        temp = temp->next_;
+    }
+    return nullptr;
+}
+
 template <class Key>
 auto DoubleLinkedList<Key>::InsertOrdered(Node *node) -> bool {
   auto *temp = head_->next_;
@@ -98,7 +124,7 @@ auto DoubleLinkedList<Key>::InsertOrdered(Node *node) -> bool {
     InsertFrontNode(node);
     return true;
   }
-  while (temp != head_ && temp->visite_count < node->visite_count) {
+  while (temp != head_ && temp->visite_count <= node->visite_count) {
     temp = temp->next_;
   }
   temp->pre_->next_ = node;
@@ -119,7 +145,6 @@ bustub::DoubleLinkedList<Key>::~DoubleLinkedList() {
   }
   delete head_;
 }
-template class DoubleLinkedList<frame_id_t>;
 }  // namespace bustub
 
 bustub::LRU_K::LRU_K(int size, int K):capacity(size),k(K) {
@@ -128,26 +153,86 @@ bustub::LRU_K::LRU_K(int size, int K):capacity(size),k(K) {
 
 void bustub::LRU_K::access(frame_id_t id) {
   // 先访问第一层cache
-  if (LRU_map.count(id)) {
+    if (LRU_map.count(id)) {
     // 如果命中
-    Node *node = LRU_map[id];
-    lru_cache.RemoveNodeFromList(node);
-    lru_cache.InsertFrontNode(node);
-
+        Node *node = LRU_map[id];
+        lru_cache.RemoveNodeFromList(node);
+        lru_cache.InsertFrontNode(node);
     }
-    // 再访问第二层cache
+    // 如果没有命中，再访问第二层cache
     else if(history_map.count(id)){
-        //如果命中
+        // 如果命中
         Node *node = history_map[id];
         node->visite_count++;
         // 如果访问次数满k次了
         if (node->visite_count==k){
-
+            history_cache.RemoveNodeFromList(node); // 将其从第一层cache移掉
+            lru_cache.InsertFrontNode(node); // 将其插入到第二层cache中
+            LRU_map[id] = node;
         }else{
             history_cache.RemoveNodeFromList(node);
             history_cache.InsertOrdered(node);
         }
+    }else{
+        // 如果两层cache都没有命中，那么就执行插入操作
+        // 先判断cache是否满
+        if(IsFull()){
+            // 如果满了，则需要逐出元素
+            return;
+        }else{ 
+            // 如果没有满，则插入
+            Node * new_node = new Node(id, 1);
+            history_cache.InsertOrdered(new_node);
+            history_map[id] = new_node;
+        }
     }
-
     // 如果两层
+}
+
+bool bustub::LRU_K::evict(frame_id_t *id) {
+    // 先从历史链表中寻找
+    if (history_cache.Size() > 0){
+        Node *ret = history_cache.FindFirstEvictableNode(); // 从头开始找，找到第一个可以驱逐的结点，然后驱逐
+        if (ret==nullptr){
+            return false;
+        }else{
+            *id = ret->value;
+            history_cache.RemoveNodeFromList(ret);
+            return true;
+        }
+    }
+    // 没有的话，再从lru_cache中寻找
+    if (lru_cache.Size() > 0){
+        Node *ret = history_cache.FindFirstEvictableNode();
+        if (ret==nullptr){
+            return false;
+        }else{
+            *id = ret->value;
+            history_cache.RemoveNodeFromList(ret);
+            return true;
+        }
+    }
+    return false;
+
+}
+bool bustub::LRU_K::SetEvictable(frame_id_t id, bool evictable) {
+  // 如果 直接在历史缓存区里找到
+  if (history_map.count(id) > 0) {
+    Node *temp = history_map[id];
+    temp->evictable = evictable;
+  } else if (LRU_map.count(id) > 0) {
+    Node *temp = LRU_map[id];
+    temp->evictable = evictable;
+  } else {
+    return false;
+  }
+  return true;
+}
+
+int bustub::LRU_K::size() { 
+    return lru_cache.Size() + history_cache.Size(); 
+}
+
+bool bustub::LRU_K::IsFull() { 
+    return size() >= capacity; 
 }

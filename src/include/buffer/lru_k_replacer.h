@@ -34,6 +34,7 @@ public:
 		Node * pre_;
 		Node * next_;
 		Key value;
+    bool evictable {true};
 		int visite_count{0};
 		Node(Key frame_id);
 		Node(Key frame_id, int vc);
@@ -45,10 +46,11 @@ public:
 	Node * head_;
 	int size;
 	auto InsertFront(Key frame_id) -> bool;
+  auto InsertTailNode(Node * temp) -> bool;
 	auto InsertFrontNode(Node * temp) -> bool;
 	auto RemoveTail(Key *frame_id) -> bool;
 	auto RemoveNodeFromList(Node *node) -> bool;
-
+  auto FindFirstEvictableNode() -> Node*;
 	inline int Size() { return size;}
 	auto InsertOrdered(Node *) -> bool;
 
@@ -61,6 +63,7 @@ class LRU_K{
 	typedef DoubleLinkedList<frame_id_t> LRU_List;
 	typedef DoubleLinkedList<frame_id_t> History_List;
 	typedef std::unordered_map<frame_id_t, Node*> Map;
+
 	int capacity;
 	int k;
 
@@ -71,6 +74,12 @@ class LRU_K{
 public:
 	LRU_K(int size, int K);
 	void access(frame_id_t id);
+  bool evict(frame_id_t *id);
+
+  bool SetEvictable(frame_id_t id, bool evictable);
+
+	int size();
+	bool IsFull();
 
 	
 };
