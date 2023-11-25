@@ -46,6 +46,8 @@ public:
 	Node * head_;
 	int size;
 	auto InsertFront(Key frame_id) -> bool;
+  auto InsertTail(Key frame_id) -> bool;
+
   auto InsertTailNode(Node * temp) -> bool;
 	auto InsertFrontNode(Node * temp) -> bool;
 	auto RemoveTail(Key *frame_id) -> bool;
@@ -71,12 +73,14 @@ class LRU_K{
 	History_List history_cache;
 	Map history_map;
 	Map LRU_map;
+  
 public:
 	LRU_K(int size, int K);
 	void access(frame_id_t id);
   bool evict(frame_id_t *id);
-
+  bool contained(frame_id_t id);
   bool SetEvictable(frame_id_t id, bool evictable);
+  bool Remove(frame_id_t id);
 
 	int size();
 	bool IsFull();
@@ -200,8 +204,10 @@ class LRUKReplacer {
   [[maybe_unused]] size_t curr_size_{0};
   [[maybe_unused]] size_t replacer_size_;
   [[maybe_unused]] size_t k_;
-  std::set<frame_id_t> no_evictable_set_;
   std::mutex latch_;
+  LRU_K lru_k;
+  int evict_able_size;
+  int evict_disable_size;
 };
 
 }  // namespace bustub
