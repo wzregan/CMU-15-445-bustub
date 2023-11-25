@@ -19,6 +19,10 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
 lru_k(num_frames, k), evict_able_size(0), evict_disable_size(0) {
 
 }
+LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k),
+lru_k(num_frames, k), evict_able_size(0), evict_disable_size(0) {
+
+}
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool { 
     std::scoped_lock sl(this->latch_);
