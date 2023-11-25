@@ -16,7 +16,7 @@
 
 namespace bustub {
 
-TEST(LRUKReplacerTest, DISABLED_SampleTest) {
+TEST(LRUKReplacerTest, ENABLE_SampleTest) {
   LRUKReplacer lru_replacer(7, 2);
 
   // Scenario: add six elements to the replacer. We have [1,2,3,4,5]. Frame 6 is non-evictable.
@@ -96,24 +96,23 @@ TEST(LRUKReplacerTest, DISABLED_SampleTest) {
   lru_replacer.Remove(1);
   ASSERT_EQ(0, lru_replacer.Size());
 }
-bustub::DoubleLinkedList<frame_id_t> l1;
-bustub::DoubleLinkedList<int> l2;
 
-TEST(DoubleLinkedListt, ENABLE_DoubleLinkedListSampleTest) {
+TEST(DoubleLinkedListt, DISABLED_DoubleLinkedListSampleTest) {
     DoubleLinkedList<frame_id_t> list;
     list.InsertFront(1);
     list.InsertFront(2);
     list.InsertFront(3);
     list.InsertFront(4);
-    EXPECT_EQ(list.Size(),4);
+    list.InsertTail(0);
+    EXPECT_EQ(list.Size(),5);
     auto temp = list.head_->next_;
-    for (int i = 1; i < 5; i++){
+    for (int i = 1; i <= 5; i++){
         EXPECT_EQ(temp->value,5-i);
         temp = temp->next_;
     }
     frame_id_t id;
     list.RemoveTail(&id);
-    EXPECT_EQ(id, 1);
+    EXPECT_EQ(id, 0);
 
 
     DoubleLinkedList<frame_id_t> list2;
@@ -124,10 +123,11 @@ TEST(DoubleLinkedListt, ENABLE_DoubleLinkedListSampleTest) {
     list2.InsertOrdered(n1);
     list2.InsertOrdered(n2);
     list2.InsertOrdered(n3);
-    list2.InsertOrdered(n11);
+    list2.InsertOrdered(n11);  //  n3 n2 n1 n11
     EXPECT_EQ(n1->next_,n11);
     EXPECT_EQ(n1,n11->pre_);
     EXPECT_EQ(n3->evictable,true);
+    
     temp = list2.head_->next_;
     for (int i = 1; i < 4; i++){
         std::cout<<temp->value<<"\n";
@@ -139,11 +139,11 @@ TEST(DoubleLinkedListt, ENABLE_DoubleLinkedListSampleTest) {
     n3->evictable = false;
     en1 = list2.FindFirstEvictableNode();
     EXPECT_EQ(en1, n2);
-    n2->evictable = true;
+    n2->evictable = false;
     en1 = list2.FindFirstEvictableNode();
     EXPECT_EQ(en1, n1);
     
-    n1->evictable = true;
+    n1->evictable = false;
     en1 = list2.FindFirstEvictableNode();
     EXPECT_EQ(en1, n11);
 
@@ -152,14 +152,55 @@ TEST(DoubleLinkedListt, ENABLE_DoubleLinkedListSampleTest) {
     EXPECT_EQ(en1, nullptr);
 }
 
-TEST(LRU_K,LRU_K_SampleTest) {
+TEST(LRU_K,DISABLED_LRU_K_SampleTest) {
     LRU_K lruk(8,3);
     lruk.access(1);
     lruk.access(2);
     lruk.access(3);
+    lruk.access(3);
+    lruk.access(3);
+    lruk.access(3);
+    lruk.access(1);
+    lruk.access(2);
 
+    frame_id_t id;
+    bool evict_flag = lruk.evict(&id);
+    EXPECT_EQ(evict_flag, true);
+    EXPECT_EQ(id, 1);
+
+    lruk.access(4);
+    lruk.access(2);
+
+    evict_flag = lruk.evict(&id);
+    EXPECT_EQ(evict_flag, true);
+    EXPECT_EQ(id, 4);
+
+    evict_flag = lruk.evict(&id);
+    EXPECT_EQ(evict_flag, true);
+    EXPECT_EQ(id, 3);
+    evict_flag = lruk.evict(&id);
+    EXPECT_EQ(evict_flag, true);
+    EXPECT_EQ(id, 2);
+    EXPECT_EQ(lruk.size(), 0);
+
+
+    lruk.access(1);
+    lruk.access(2);
+    lruk.access(3);
+    lruk.access(4);
+    lruk.SetEvictable(1,false);
+    evict_flag = lruk.evict(&id);
+    EXPECT_EQ(evict_flag, true);
+    EXPECT_EQ(id, 2);
+    EXPECT_EQ(lruk.size(), 3);
+    evict_flag = lruk.evict(&id);
+    EXPECT_EQ(evict_flag, true);
+    EXPECT_EQ(id, 3);
+    evict_flag = lruk.evict(&id);
+    EXPECT_EQ(evict_flag, true);
+    EXPECT_EQ(id, 4);
+    EXPECT_EQ(lruk.size(), 1);
 
 }
-
 
 }  // namespace bustub

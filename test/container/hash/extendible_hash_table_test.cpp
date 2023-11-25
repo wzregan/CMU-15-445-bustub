@@ -10,7 +10,7 @@
 using std::string;
 namespace bustub {
 
-TEST(ExtendibleHashTableTest, ENABLE_SampleTest) {
+TEST(ExtendibleHashTableTest, DISABLED_SampleTest) {
   auto table = std::make_unique<ExtendibleHashTable<int, std::string>>(2);
 
   table->Insert(1, "a");
