@@ -24,7 +24,7 @@ namespace bustub {
 
 template <typename K, typename V>
 ExtendibleHashTable<K, V>::ExtendibleHashTable(size_t bucket_size)
-    : global_depth_(1), bucket_size_(bucket_size), num_buckets_(1),dir_(2, std::shared_ptr<Bucket>()){
+    : global_depth_(1), bucket_size_(bucket_size), num_buckets_(1),dir_(bucket_size, std::shared_ptr<Bucket>()){
 		num_buckets_ = pow(bucket_size_, 1);
 		for (int i = 0 ; i < pow(bucket_size_ ,1); i++){
 			dir_[i].reset(new Bucket(bucket_size_,1,i));
