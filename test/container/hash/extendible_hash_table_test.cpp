@@ -2,10 +2,10 @@
  * extendible_hash_test.cpp
  */
 
-#include <memory>
-#include <thread>  // NOLINT
-#include <string>
 #include "container/hash/extendible_hash_table.h"
+#include <memory>
+#include <string>
+#include <thread>  // NOLINT
 #include "gtest/gtest.h"
 using std::string;
 namespace bustub {
@@ -31,8 +31,6 @@ TEST(ExtendibleHashTableTest, DISABLED_SampleTest) {
   EXPECT_EQ(3, table->dir_[1]->GetItems().size());
   EXPECT_EQ(2, table->dir_[2]->GetItems().size());
   EXPECT_EQ(2, table->dir_[3]->GetItems().size());
-
-
 
   std::string result;
   table->Find(9, result);
@@ -76,7 +74,7 @@ TEST(ExtendibleHashTableTest, ENABLED_ConcurrentInsertTest) {
 }
 
 }  // namespace bustub
-TEST(HASH_TABLE_BUCKET_TEST, ENABLE_INSERT_TEST){
-    bustub::ExtendibleHashTable<string,int>::Bucket bucket(2,1);
-    EXPECT_EQ(bucket.GetCapacity(), 2);
+TEST(HASH_TABLE_BUCKET_TEST, ENABLE_INSERT_TEST) {
+  bustub::ExtendibleHashTable<string, int>::Bucket bucket(2, 1);
+  EXPECT_EQ(bucket.GetCapacity(), 2);
 }

@@ -41,7 +41,7 @@ class ExtendibleHashTable : public HashTable<K, V> {
    *
    * @brief Create a new ExtendibleHashTable.
    * @param bucket_size: fixed size for each bucket
-   */ 
+   */
   explicit ExtendibleHashTable(size_t bucket_siz);
 
   /**
@@ -108,28 +108,26 @@ class ExtendibleHashTable : public HashTable<K, V> {
   /**
    * Bucket class for each hash table bucket that the directory points to.
    */
-class Bucket {
-private:
-  int min_diridx;
-public:
-  	bool contained(const K &key);	
+  class Bucket {
+   private:
+    int min_diridx;
+
+   public:
+    bool contained(const K &key);
     explicit Bucket(size_t size = 2, int depth = 1, int mindiridx = -1);
     /** @brief Check if a bucket is full. */
-    inline auto IsFull() const -> bool { 
-      return (int)list_.size() >= GetCapacity(); 
-    }
-    inline auto GetMinDirIdx() { return min_diridx;}
+    inline auto IsFull() const -> bool { return static_cast<int>(list_.size()) >= GetCapacity(); }
+    inline auto GetMinDirIdx() { return min_diridx; }
 
     /** @brief Get the local depth of the bucket. */
     inline auto GetDepth() const -> int { return depth_; }
 
     /** @brief Increment the local depth of a bucket. */
-    inline int IncrementDepth() { return ++depth_;}
+    inline int IncrementDepth() { return ++depth_; }
 
     inline auto GetItems() -> std::list<std::pair<K, V>> & { return list_; }
 
-    inline auto GetCapacity() const-> int { return pow(this->size_, this->depth_); }
-
+    inline auto GetCapacity() const -> int { return pow(this->size_, this->depth_); }
 
     inline auto SetMinDirIdx(int dix) -> void { this->min_diridx = dix; }
     /**
@@ -164,8 +162,9 @@ public:
      * @param value The value to be inserted.
      * @return True if the key-value pair is inserted, false otherwise.
      */
-    auto Insert( const K &key,  const V &value) -> bool;
+    auto Insert(const K &key, const V &value) -> bool;
     auto IncreaseDepth() -> int;
+
    private:
     // TODO(student): You may add additional private members and helper functions
     size_t size_;
@@ -173,7 +172,7 @@ public:
     std::list<std::pair<K, V>> list_;
   };
 
-public:
+ public:
   // TODO(student): You may add additional private members and helper functions and remove the ones
   // you don't need.
 
@@ -207,7 +206,6 @@ public:
   auto GetNumBucketsInternal() const -> int;
   auto SplitBucket(int dir_idx) -> std::shared_ptr<Bucket>;
   auto ExtendDirectory() -> int;
-
 };
 
 }  // namespace bustub

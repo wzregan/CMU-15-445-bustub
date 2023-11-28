@@ -102,7 +102,7 @@ TEST(BufferPoolManagerInstanceTest, ENABLE_SampleTest) {
 
   // Scenario: The buffer pool is empty. We should be able to create a new page.
   ASSERT_NE(nullptr, page0);
-  EXPECT_EQ(0, page_id_temp);// 0 
+  EXPECT_EQ(0, page_id_temp);  // 0
 
   // Scenario: Once we have a page, we should be able to read and write content.
   snprintf(page0->GetData(), BUSTUB_PAGE_SIZE, "Hello");
@@ -110,7 +110,7 @@ TEST(BufferPoolManagerInstanceTest, ENABLE_SampleTest) {
 
   // Scenario: We should be able to create new pages until we fill up the buffer pool.
   for (size_t i = 1; i < buffer_pool_size; ++i) {
-    EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp)); // 0 1 2 3 4 5 6 7 8 9 19
+    EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));  // 0 1 2 3 4 5 6 7 8 9 19
   }
 
   // Scenario: Once the buffer pool is full, we should not be able to create any new pages.
@@ -121,10 +121,10 @@ TEST(BufferPoolManagerInstanceTest, ENABLE_SampleTest) {
   // Scenario: After unpinning pages {0, 1, 2, 3, 4} and pinning another 4 new pages,
   // there would still be one buffer page left for reading page 0.
   for (int i = 0; i < 5; ++i) {
-    EXPECT_EQ(true, bpm->UnpinPage(i, true));   // 0 1 2 3 4 |  5 6 7 8 9 10
+    EXPECT_EQ(true, bpm->UnpinPage(i, true));  // 0 1 2 3 4 |  5 6 7 8 9 10
   }
   for (int i = 0; i < 4; ++i) {
-    EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp)); // 0 1 2 3 4 |  5 6 7 8 9 10 |11 12 13 14
+    EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));  // 0 1 2 3 4 |  5 6 7 8 9 10 |11 12 13 14
   }
 
   // Scenario: We should be able to fetch the data we wrote a while ago.

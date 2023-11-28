@@ -14,78 +14,76 @@
 
 #include <limits>
 #include <list>
+#include <memory>
 #include <mutex>  // NOLINT
+#include <set>
 #include <unordered_map>
 #include <vector>
-#include <set>
 #include "common/config.h"
 #include "common/macros.h"
-#include <memory>
 namespace bustub {
 /**
- * 
- * 
-*/
-template<class Key>
-class DoubleLinkedList{
-public:
-  	class Node{
-	public:
-		Node * pre_;
-		Node * next_;
-		Key value;
-    bool evictable {true};
-		int visite_count{0};
-		Node(Key frame_id);
-		Node(Key frame_id, int vc);
+ *
+ *
+ */
+template <class Key>
+class DoubleLinkedList {
+ public:
+  class Node {
+   public:
+    Node *pre_;
+    Node *next_;
+    Key value;
+    bool evictable{true};
+    int visite_count{0};
+    explicit Node(Key frame_id);
+    Node(Key frame_id, int vc);
+  };
 
-  	};
-public:
-	DoubleLinkedList();
-public:
-	Node * head_;
-	int size;
-	auto InsertFront(Key frame_id) -> bool;
+ public:
+  DoubleLinkedList();
+
+ public:
+  Node *head_;
+  int size;
+  auto InsertFront(Key frame_id) -> bool;
   auto InsertTail(Key frame_id) -> bool;
 
-  auto InsertTailNode(Node * temp) -> bool;
-	auto InsertFrontNode(Node * temp) -> bool;
-	auto RemoveTail(Key *frame_id) -> bool;
-	auto RemoveNodeFromList(Node *node) -> bool;
-  auto FindFirstEvictableNode() -> Node*;
-	inline int Size() { return size;}
-	auto InsertOrdered(Node *) -> bool;
+  auto InsertTailNode(Node *temp) -> bool;
+  auto InsertFrontNode(Node *temp) -> bool;
+  auto RemoveTail(Key *frame_id) -> bool;
+  auto RemoveNodeFromList(Node *node) -> bool;
+  auto FindFirstEvictableNode() -> Node *;
+  inline int Size() { return size; }
+  auto InsertOrdered(Node *) -> bool;
 
-
-	~DoubleLinkedList();
+  ~DoubleLinkedList();
 };
 
-class LRU_K{
-	typedef DoubleLinkedList<frame_id_t>::Node Node;
-	typedef DoubleLinkedList<frame_id_t> LRU_List;
-	typedef DoubleLinkedList<frame_id_t> History_List;
-	typedef std::unordered_map<frame_id_t, Node*> Map;
+class LRU_K {
+  typedef DoubleLinkedList<frame_id_t>::Node Node;
+  typedef DoubleLinkedList<frame_id_t> LRU_List;
+  typedef DoubleLinkedList<frame_id_t> History_List;
+  typedef std::unordered_map<frame_id_t, Node *> Map;
 
-	int capacity;
-	int k;
+  int capacity;
+  int k;
 
-	LRU_List lru_cache;
-	History_List history_cache;
-	Map history_map;
-	Map LRU_map;
-  
-public:
-	LRU_K(int size, int K);
-	void access(frame_id_t id);
+  LRU_List lru_cache;
+  History_List history_cache;
+  Map history_map;
+  Map LRU_map;
+
+ public:
+  LRU_K(int size, int K);
+  void access(frame_id_t id);
   bool evict(frame_id_t *id);
   bool contained(frame_id_t id);
   bool SetEvictable(frame_id_t id, bool evictable);
   bool Remove(frame_id_t id);
 
-	int size();
-	bool IsFull();
-
-	
+  int size();
+  bool IsFull();
 };
 
 /**

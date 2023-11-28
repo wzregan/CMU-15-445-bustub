@@ -175,7 +175,5 @@ class BufferPoolManagerInstance : public BufferPoolManager {
   void DeallocatePage(__attribute__((unused)) page_id_t page_id) {
     // This is a no-nop right now without a more complex data structure to track deallocated pages
   }
-
-  
 };
 }  // namespace bustub

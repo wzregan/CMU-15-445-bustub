@@ -98,8 +98,8 @@ class DiskManager {
   std::fstream log_io_;
   std::string log_name_;
   // stream to write db file
-  std::fstream db_io_; // 文件流，主要用于向db文件中写文件用的
-  std::string file_name_; // db 文件名
+  std::fstream db_io_;     // 文件流，主要用于向db文件中写文件用的
+  std::string file_name_;  // db 文件名
   int num_flushes_{0};
   int num_writes_{0};
   bool flush_log_{false};

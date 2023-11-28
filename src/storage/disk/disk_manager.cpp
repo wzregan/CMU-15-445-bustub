@@ -78,19 +78,19 @@ void DiskManager::ShutDown() {
  * Write the contents of the specified page into disk file
  */
 void DiskManager::WritePage(page_id_t page_id, const char *page_data) {
-  std::scoped_lock scoped_db_io_latch(db_io_latch_); // 一个scope锁
-  size_t offset = static_cast<size_t>(page_id) * BUSTUB_PAGE_SIZE; // 根据page_id 算出page在db文件中的偏移量
+  std::scoped_lock scoped_db_io_latch(db_io_latch_);                // 一个scope锁
+  size_t offset = static_cast<size_t>(page_id) * BUSTUB_PAGE_SIZE;  // 根据page_id 算出page在db文件中的偏移量
   // set write cursor to offset
-  num_writes_ += 1;  // 
+  num_writes_ += 1;  //
   db_io_.seekp(offset);
-  db_io_.write(page_data, BUSTUB_PAGE_SIZE); // 直接刷入磁盘中
+  db_io_.write(page_data, BUSTUB_PAGE_SIZE);  // 直接刷入磁盘中
   // check for I/O error
-  if (db_io_.bad()) { // 检查fstream流是否有故障
+  if (db_io_.bad()) {  // 检查fstream流是否有故障
     LOG_DEBUG("I/O error while writing");
     return;
   }
   // needs to flush to keep disk file in sync
-  db_io_.flush(); // 刷新缓存
+  db_io_.flush();  // 刷新缓存
 }
 
 /**
@@ -100,20 +100,20 @@ void DiskManager::ReadPage(page_id_t page_id, char *page_data) {
   std::scoped_lock scoped_db_io_latch(db_io_latch_);
   int offset = page_id * BUSTUB_PAGE_SIZE;
   // check if read beyond file length
-  if (offset > GetFileSize(file_name_)) { // 查看偏移量是否超出了db文件的大小
+  if (offset > GetFileSize(file_name_)) {  // 查看偏移量是否超出了db文件的大小
     LOG_DEBUG("I/O error reading past end of file");
     // std::cerr << "I/O error while reading" << std::endl;
   } else {
     // set read cursor to offset
-    db_io_.seekp(offset); // 跳到开始读的地方
-    db_io_.read(page_data, BUSTUB_PAGE_SIZE); // 读入到缓冲区中
+    db_io_.seekp(offset);                      // 跳到开始读的地方
+    db_io_.read(page_data, BUSTUB_PAGE_SIZE);  // 读入到缓冲区中
     if (db_io_.bad()) {
       LOG_DEBUG("I/O error while reading");
       return;
     }
     // if file ends before reading BUSTUB_PAGE_SIZE
     int read_count = db_io_.gcount();
-    if (read_count < BUSTUB_PAGE_SIZE) { // 如果读的数据少于一个页面的数据，那么就将返回的数据后面填补0
+    if (read_count < BUSTUB_PAGE_SIZE) {  // 如果读的数据少于一个页面的数据，那么就将返回的数据后面填补0
       LOG_DEBUG("Read less than a page");
       db_io_.clear();
       // std::cerr << "Read less than a page" << std::endl;
@@ -126,10 +126,10 @@ void DiskManager::ReadPage(page_id_t page_id, char *page_data) {
  * Write the contents of the log into disk file
  * Only return when sync is done, and only perform sequence write
  */
-void DiskManager::WriteLog(char *log_data, int size) { 
+void DiskManager::WriteLog(char *log_data, int size) {
   /**
    * 向日志文件中写日志信息
-  */
+   */
   // enforce swap log buffer
   assert(log_data != buffer_used);
   buffer_used = log_data;
@@ -167,7 +167,7 @@ void DiskManager::WriteLog(char *log_data, int size) {
 auto DiskManager::ReadLog(char *log_data, int size, int offset) -> bool {
   /**
    * 从log文件中读取日志信息，放到指定的log_data指向的内存区域中，大小为size
-  */
+   */
   if (offset >= GetFileSize(log_name_)) {
     // LOG_DEBUG("end of log file");
     // LOG_DEBUG("file size is %d", GetFileSize(log_name_));
