@@ -14,35 +14,37 @@
 namespace bustub {
 
 LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k)
-    : replacer_size_(num_frames), k_(k), lru_k(num_frames, k), evict_able_size(0), evict_disable_size(0) {}
+    : replacer_size_(num_frames), k_(k), lru_k_(num_frames, k), evict_able_size_(0), evict_disable_size_(0) {}
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   std::scoped_lock sl(this->latch_);
-  bool ret = lru_k.evict(frame_id);
+  bool ret = lru_k_.Evict(frame_id);
   if (ret) {
-    this->evict_able_size--;
+    this->evict_able_size_--;
   }
   return ret;
 }
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   std::scoped_lock sl(this->latch_);
-  BUSTUB_ASSERT(evict_able_size + evict_disable_size < static_cast<int>(replacer_size_), "LRK out of specific size");
-  if (!lru_k.contained(frame_id)) {
-    this->evict_able_size++;
+  BUSTUB_ASSERT(evict_able_size_ + evict_disable_size_ < static_cast<int>(replacer_size_), "LRK out of specific size");
+  if (!lru_k_.Contained(frame_id)) {
+    this->evict_able_size_++;
   }
-  lru_k.access(frame_id);
+  lru_k_.Access(frame_id);
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
   std::scoped_lock sl(this->latch_);
-  if (!lru_k.SetEvictable(frame_id, set_evictable)) return;
+  if (!lru_k_.SetEvictable(frame_id, set_evictable)) {
+    return;
+  }
   if (!set_evictable) {
-    this->evict_disable_size++;
-    this->evict_able_size--;
+    this->evict_disable_size_++;
+    this->evict_able_size_--;
   } else {
-    this->evict_disable_size--;
-    this->evict_able_size++;
+    this->evict_disable_size_--;
+    this->evict_able_size_++;
   }
 }
 
@@ -51,19 +53,19 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
   // BUSTUB_ASSERT(no_evictable_set_.count(frame_id),0);
   this->SetEvictable(frame_id, true);
 
-  if (lru_k.Remove(frame_id)) {
-    this->evict_able_size--;
+  if (lru_k_.Remove(frame_id)) {
+    this->evict_able_size_--;
   }
 }
 
-auto LRUKReplacer::Size() -> size_t { return this->evict_able_size; }
+auto LRUKReplacer::Size() -> size_t { return this->evict_able_size_; }
 
 template <class Key>
-DoubleLinkedList<Key>::Node::Node(Key framd_id) : pre_(nullptr), next_(nullptr), value(framd_id) {}
+DoubleLinkedList<Key>::Node::Node(Key frame_id) : pre_(nullptr), next_(nullptr), value_(frame_id) {}
 template <class Key>
-DoubleLinkedList<Key>::Node::Node(Key frame_id, int vc) : value(frame_id), visite_count(vc) {}
+DoubleLinkedList<Key>::Node::Node(Key frame_id, int vc) : value_(frame_id), visite_count_(vc) {}
 template <class Key>
-bustub::DoubleLinkedList<Key>::DoubleLinkedList() : size(0) {
+bustub::DoubleLinkedList<Key>::DoubleLinkedList() {
   head_ = new Node({});
   head_->pre_ = head_;
   head_->next_ = head_;
@@ -86,7 +88,7 @@ auto bustub::DoubleLinkedList<Key>::InsertFrontNode(Node *temp) -> bool {
   head_->next_->pre_ = temp;
   head_->next_ = temp;
   temp->pre_ = head_;
-  size++;
+  size_++;
   return true;
 }
 template <class Key>
@@ -95,20 +97,20 @@ auto bustub::DoubleLinkedList<Key>::InsertTailNode(Node *temp) -> bool {
   temp->pre_ = head_->pre_;
   head_->pre_ = temp;
   temp->next_ = head_;
-  size++;
+  size_++;
   return true;
 }
 template <class Key>
 auto bustub::DoubleLinkedList<Key>::RemoveTail(Key *frame_id) -> bool {
-  if (size == 0) {
+  if (size_ == 0) {
     return false;
   }
   Node *tail = head_->pre_;
-  *frame_id = tail->value;
+  *frame_id = tail->value_;
   tail->pre_->next_ = tail->next_;
   tail->next_->pre_ = tail->pre_;
   delete tail;
-  size--;
+  size_--;
   return true;
 }
 
@@ -121,7 +123,7 @@ auto DoubleLinkedList<Key>::RemoveNodeFromList(Node *node) -> bool {
   node->next_->pre_ = node->pre_;
   node->pre_ = nullptr;
   node->next_ = nullptr;
-  size--;
+  size_--;
   return true;
 }
 
@@ -129,7 +131,7 @@ template <class Key>
 auto DoubleLinkedList<Key>::FindFirstEvictableNode() -> Node * {
   auto temp = this->head_->next_;
   while (temp != this->head_) {
-    if (temp->evictable) {
+    if (temp->evictable_) {
       return temp;
     }
     temp = temp->next_;
@@ -144,14 +146,14 @@ auto DoubleLinkedList<Key>::InsertOrdered(Node *node) -> bool {
     InsertFrontNode(node);
     return true;
   }
-  while (temp != head_ && temp->visite_count <= node->visite_count) {
+  while (temp != head_ && temp->visite_count_ <= node->visite_count_) {
     temp = temp->next_;
   }
   temp->pre_->next_ = node;
   node->next_ = temp;
   node->pre_ = temp->pre_;
   temp->pre_ = node;
-  size++;
+  size_++;
   return true;
 }
 template <class Key>
@@ -168,29 +170,29 @@ bustub::DoubleLinkedList<Key>::~DoubleLinkedList() {
 }
 }  // namespace bustub
 
-bustub::LRU_K::LRU_K(int size, int K) : capacity(size), k(K) {}
+bustub::LruK::LruK(int size, int K) : capacity_(size), k_(K) {}
 
-void bustub::LRU_K::access(frame_id_t id) {
+void bustub::LruK::Access(frame_id_t id) {
   // 先访问第一层cache
-  if (LRU_map.count(id)) {
+  if (lru_map_.count(id) != 0) {
     // 如果命中
-    Node *node = LRU_map[id];
-    lru_cache.RemoveNodeFromList(node);
-    lru_cache.InsertTailNode(node);
-  } else if (history_map.count(id)) {
+    Node *node = lru_map_[id];
+    lru_cache_.RemoveNodeFromList(node);
+    lru_cache_.InsertTailNode(node);
+  } else if (history_map_.count(id) != 0) {
     // 如果没有命中，再访问第二层cache
     // 如果命中
-    Node *node = history_map[id];
-    node->visite_count++;
+    Node *node = history_map_[id];
+    node->visite_count_++;
     // 如果访问次数满k次了
-    if (node->visite_count == k) {
-      history_cache.RemoveNodeFromList(node);  // 将其从第一层cache移掉
-      lru_cache.InsertTailNode(node);          // 将其插入到第二层cache中
-      LRU_map[id] = node;
-      history_map.erase(id);
+    if (node->visite_count_ == k_) {
+      history_cache_.RemoveNodeFromList(node);  // 将其从第一层cache移掉
+      lru_cache_.InsertTailNode(node);          // 将其插入到第二层cache中
+      lru_map_[id] = node;
+      history_map_.erase(id);
     } else {
-      history_cache.RemoveNodeFromList(node);
-      history_cache.InsertOrdered(node);
+      history_cache_.RemoveNodeFromList(node);
+      history_cache_.InsertOrdered(node);
     }
   } else {
     // 如果两层cache都没有命中，那么就执行插入操作
@@ -198,74 +200,74 @@ void bustub::LRU_K::access(frame_id_t id) {
     if (IsFull()) {
       // 如果满了，则需要逐出元素
       return;
-    } else {
-      // 如果没有满，则插入
-      Node *new_node = new Node(id, 1);
-      history_cache.InsertOrdered(new_node);
-      history_map[id] = new_node;
     }
+    // 如果没有满，则插入
+    Node *new_node = new Node(id, 1);
+    history_cache_.InsertOrdered(new_node);
+    history_map_[id] = new_node;
   }
   // 如果两层
 }
 
-bool bustub::LRU_K::evict(frame_id_t *id) {
+auto bustub::LruK::Evict(frame_id_t *id) -> bool {
   // 先从历史链表中寻找
-  if (history_cache.Size() > 0) {
-    Node *ret = history_cache.FindFirstEvictableNode();  // 从头开始找，找到第一个可以驱逐的结点，然后驱逐
+  if (history_cache_.Size() > 0) {
+    Node *ret = history_cache_.FindFirstEvictableNode();  // 从头开始找，找到第一个可以驱逐的结点，然后驱逐
     if (ret != nullptr) {
-      *id = ret->value;
-      history_cache.RemoveNodeFromList(ret);
-      history_map.erase(ret->value);
+      *id = ret->value_;
+      history_cache_.RemoveNodeFromList(ret);
+      history_map_.erase(ret->value_);
       delete ret;
       return true;
     }
   }
   // 没有的话，再从lru_cache中寻找
-  if (lru_cache.Size() > 0) {
-    Node *ret = lru_cache.FindFirstEvictableNode();
+  if (lru_cache_.Size() > 0) {
+    Node *ret = lru_cache_.FindFirstEvictableNode();
     if (ret != nullptr) {
-      *id = ret->value;
-      lru_cache.RemoveNodeFromList(ret);
-      LRU_map.erase(ret->value);
+      *id = ret->value_;
+      lru_cache_.RemoveNodeFromList(ret);
+      lru_map_.erase(ret->value_);
       delete ret;
       return true;
     }
   }
   return false;
 }
-bool bustub::LRU_K::contained(frame_id_t id) { return LRU_map.count(id) || history_map.count(id); }
-bool bustub::LRU_K::SetEvictable(frame_id_t id, bool evictable) {
+auto bustub::LruK::Contained(frame_id_t id) -> bool { return lru_map_.count(id) > 0 || history_map_.count(id) > 0; }
+auto bustub::LruK::SetEvictable(frame_id_t id, bool evictable) -> bool {
   // 如果 直接在历史缓存区里找到
   bool flag = false;
-  if (history_map.count(id) > 0) {
-    Node *temp = history_map[id];
-    flag = (temp->evictable != evictable);
-    temp->evictable = evictable;
-  } else if (LRU_map.count(id) > 0) {
-    Node *temp = LRU_map[id];
-    flag = (temp->evictable != evictable);
-    temp->evictable = evictable;
+  if (history_map_.count(id) > 0) {
+    Node *temp = history_map_[id];
+    flag = (temp->evictable_ != evictable);
+    temp->evictable_ = evictable;
+  } else if (lru_map_.count(id) > 0) {
+    Node *temp = lru_map_[id];
+    flag = (temp->evictable_ != evictable);
+    temp->evictable_ = evictable;
   }
   return flag;
 }
 
-bool bustub::LRU_K::Remove(frame_id_t id) {
-  if (history_map.count(id) > 0) {
-    Node *temp = history_map[id];
-    history_map.erase(id);
-    history_cache.RemoveNodeFromList(temp);
+auto bustub::LruK::Remove(frame_id_t id) -> bool {
+  if (history_map_.count(id) > 0) {
+    Node *temp = history_map_[id];
+    history_map_.erase(id);
+    history_cache_.RemoveNodeFromList(temp);
     return true;
-  } else if (LRU_map.count(id) > 0) {
-    Node *temp = LRU_map[id];
-    LRU_map.erase(id);
-    lru_cache.RemoveNodeFromList(temp);
+  }
+  if (lru_map_.count(id) > 0) {
+    Node *temp = lru_map_[id];
+    lru_map_.erase(id);
+    lru_cache_.RemoveNodeFromList(temp);
     return true;
   }
   return false;
 }
 
-int bustub::LRU_K::size() { return lru_cache.Size() + history_cache.Size(); }
+auto bustub::LruK::Size() -> int { return lru_cache_.Size() + history_cache_.Size(); }
 
-bool bustub::LRU_K::IsFull() { return size() >= capacity; }
+auto bustub::LruK::IsFull() -> bool { return Size() >= capacity_; }
 
 template class bustub::DoubleLinkedList<int>;
