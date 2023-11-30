@@ -2,7 +2,87 @@
 
 ### Project 0
 
-### project 1
+任务0是要实现一个kv字典树，并且这个字典树可以存储任意类型的数据
+
+![1701314510627](image/README/1701314510627.png)
+
+##### TrieNode类
+
+TrieNode是我们要实现的第一个类，为了实现char->child的映射，使用了
+
+```cpp
+std::unordered_map<char, std::unique_ptr<TrieNode>> children_;
+
+// 注意，这里统一使用了unique_ptr智能指针对数据进行管理，这样的好处就是TrieNode只能当一颗Trie的节点，不会出现连接到其他Trie上的情况
+```
+
+* [ ] `TrieNode(char key_char)`
+
+- 构造函数，对一个节点赋值key，并且标记为非终端节点
+
+* [ ] `TrieNode(TrieNode &&other_trie_node)`
+
+- 移动拷贝构造函数
+
+* [ ] `bool HasChild(char key_char)`
+
+- 判断节点是否有key为key_char孩子节点，直接根据map进行查询即可
+
+* [ ] bool HasChildren()
+
+- 判断节点是否有任意一个孩子，直接判断map是不是empty
+
+* [ ] bool IsEndNode()
+
+- 直接返回是否为终端节点变量即可
+
+* [ ] char GetKeyChar()
+
+- 得到当前节点存储的key值
+
+* [ ] std::unique_ptr `<TrieNode>` *InsertChildNode(charkey_char, std::unique_ptr `<TrieNode>` &&child)
+
+- 插入孩子节点，先看chidlren_map中是否已经存在对应的key值了，日报存在直接返回null，如果不存在就直接插入即可。
+
+* [ ] std::unique_ptr `<TrieNode>` *InsertChildNode(charkey_char, std::unique_ptr `<TrieNode>` &&child)
+
+- 同理
+
+* [ ] void RemoveChildNode(char key_char)
+
+- 直接在chidren_map中删除就行了，不需要考虑内存管理，因为我们使用了unique_ptr对象，自动帮我们销毁对象
+
+* [ ] void SetEndNode(bool is_end)
+
+- 设置为终端节点
+
+##### TrieNodeWithValue类
+
+这个类继承自TrieNode，这个类比TrieNode类多了一个value属性，这个value是泛型类，可以支持任意类型的数据，构造函数方式有如下两种：
+
+```cpp
+explicit TrieNodeWithValue(TrieNode &&trieNode, T value) //基于TrieNode
+explicit TrieNodeWithValue(char key_char, T value) // 重新构建
+
+```
+
+* [ ] T GetValue();
+
+- 返回节点中的Value，因为Value属于T的泛型，所以要加上T
+
+##### Trie类
+
+Trie是最终的字典类，有一个关键的结构为root_，一切查找都从这里查，root_被初始化key_char为 `a`
+
+* [ ] bool Insert(conststd::string &key, T value)
+
+- 向Trie中插入一个kv对，思路就是从root开始逐层遍历，注意如果某个key已经存在，我们需要直接返回，原来的值不能被修改
+
+* [ ] bool Remove(conststd::string &key)
+
+- remove的思路很简单，使用递归来实现，如果递归到最后一个字符了，判断一下是否为终端节点，如果是终端节点，那么我们就返回false，如果是终端节点但是还有孩子节点，那么就不能直接删除了，我们需要直接将其标记为非终端节点即可
+
+### Project 1
 
 #### 做前必读
 
@@ -35,9 +115,7 @@ bool is_dirty_ // 是否为脏页
 
 ##### extendible_hash_table
 
-
 ##### LRUK_Replacer
-
 
 ##### BufferPoolManagerInstance
 

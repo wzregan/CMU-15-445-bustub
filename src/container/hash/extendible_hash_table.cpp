@@ -73,9 +73,8 @@ auto ExtendibleHashTable<K, V>::Find(const K &key, V &value) -> bool {
   uint64_t dir_idx = IndexOf(key);
   if (!dir_[dir_idx]) {
     return false;
-  } else {
-    return dir_[dir_idx]->Find(key, value);
-  }
+  } 
+  return dir_[dir_idx]->Find(key, value);
 }
 
 template <typename K, typename V>
@@ -125,7 +124,7 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
 // Bucket
 //===--------------------------------------------------------------------===//
 template <typename K, typename V>
-bool ExtendibleHashTable<K, V>::Bucket::contained(const K &key) {
+auto ExtendibleHashTable<K, V>::Bucket::Contained(const K &key) ->bool {
   for (auto iter = list_.begin(); iter != list_.end(); iter++) {
     if ((*iter).first == key) {
       return true;
@@ -136,7 +135,7 @@ bool ExtendibleHashTable<K, V>::Bucket::contained(const K &key) {
 
 template <typename K, typename V>
 ExtendibleHashTable<K, V>::Bucket::Bucket(size_t array_size, int depth, int mdi)
-    : min_diridx(mdi), size_(array_size), depth_(depth) {}
+    : min_diridx_(mdi), size_(array_size), depth_(depth) {}
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::SplitBucket(int dir_idx) -> std::shared_ptr<Bucket> {
@@ -169,7 +168,8 @@ auto ExtendibleHashTable<K, V>::SplitBucket(int dir_idx) -> std::shared_ptr<Buck
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::ExtendDirectory() -> int {
-  size_t start = dir_.size(), copy_cursor = 0;
+  size_t start = dir_.size(); 
+  size_t copy_cursor = 0;
 
   dir_.resize(dir_.size() * 2, std::shared_ptr<Bucket>());
   for (; start < dir_.size(); start++) {
