@@ -35,6 +35,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
+  // 后面几乎每一行都要读写数据，所以对其加上锁
   std::scoped_lock sl(this->latch_);
   if (!lru_k_.SetEvictable(frame_id, set_evictable)) {
     return;
@@ -47,12 +48,12 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
     this->evict_able_size_++;
   }
 }
-
 void LRUKReplacer::Remove(frame_id_t frame_id) {
-  std::scoped_lock sl(this->latch_);
   // BUSTUB_ASSERT(no_evictable_set_.count(frame_id),0);
+  // 这个函数里面已经考虑线程安全的问题
   this->SetEvictable(frame_id, true);
-
+  // remove需要访问临界资源，所以对其加上锁
+  std::scoped_lock sl(this->latch_);
   if (lru_k_.Remove(frame_id)) {
     this->evict_able_size_--;
   }
@@ -129,6 +130,9 @@ auto DoubleLinkedList<Key>::RemoveNodeFromList(Node *node) -> bool {
 
 template <class Key>
 auto DoubleLinkedList<Key>::FindFirstEvictableNode() -> Node * {
+  // `history_list(fifo_list)`和 `lru_list`都有一个特点，
+  // 就是即将淘汰的放在首位，对于前者我们根据visite_count_进
+  // 行排序，对于后者我们将最近访问的元素放在链表尾处。
   auto temp = this->head_->next_;
   while (temp != this->head_) {
     if (temp->evictable_) {
@@ -141,14 +145,18 @@ auto DoubleLinkedList<Key>::FindFirstEvictableNode() -> Node * {
 
 template <class Key>
 auto DoubleLinkedList<Key>::InsertOrdered(Node *node) -> bool {
+  // 先找到第一个节点
   auto *temp = head_->next_;
+  // 如果当前没有任何数据，直接头插就行了
   if (temp == head_) {
     InsertFrontNode(node);
     return true;
   }
+  // 如果有别的数据，那么就开始遍历链表，找到第一个visite_count大于node->visite_count的节点
   while (temp != head_ && temp->visite_count_ <= node->visite_count_) {
     temp = temp->next_;
   }
+  // 然后将其插入到该节点后面即可
   temp->pre_->next_ = node;
   node->next_ = temp;
   node->pre_ = temp->pre_;

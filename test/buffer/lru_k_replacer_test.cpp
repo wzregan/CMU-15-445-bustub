@@ -107,7 +107,7 @@ TEST(DoubleLinkedListt, DISABLED_DoubleLinkedListSampleTest) {
   EXPECT_EQ(list.Size(), 5);
   auto temp = list.head_->next_;
   for (int i = 1; i <= 5; i++) {
-    EXPECT_EQ(temp->value, 5 - i);
+    EXPECT_EQ(temp->value_, 5 - i);
     temp = temp->next_;
   }
   frame_id_t id;
@@ -125,79 +125,79 @@ TEST(DoubleLinkedListt, DISABLED_DoubleLinkedListSampleTest) {
   list2.InsertOrdered(n11);  //  n3 n2 n1 n11
   EXPECT_EQ(n1->next_, n11);
   EXPECT_EQ(n1, n11->pre_);
-  EXPECT_EQ(n3->evictable, true);
+  EXPECT_EQ(n3->evictable_, true);
 
   temp = list2.head_->next_;
   for (int i = 1; i < 4; i++) {
-    std::cout << temp->value << "\n";
-    EXPECT_EQ(temp->value, 4 - i);
+    std::cout << temp->value_ << "\n";
+    EXPECT_EQ(temp->value_, 4 - i);
     temp = temp->next_;
   }
   auto en1 = list2.FindFirstEvictableNode();
   EXPECT_EQ(en1, n3);
-  n3->evictable = false;
+  n3->evictable_ = false;
   en1 = list2.FindFirstEvictableNode();
   EXPECT_EQ(en1, n2);
-  n2->evictable = false;
+  n2->evictable_ = false;
   en1 = list2.FindFirstEvictableNode();
   EXPECT_EQ(en1, n1);
 
-  n1->evictable = false;
+  n1->evictable_ = false;
   en1 = list2.FindFirstEvictableNode();
   EXPECT_EQ(en1, n11);
 
-  n11->evictable = false;
+  n11->evictable_ = false;
   en1 = list2.FindFirstEvictableNode();
   EXPECT_EQ(en1, nullptr);
 }
 
 TEST(LRU_K, DISABLED_LRU_K_SampleTest) {
-  LRU_K lruk(8, 3);
-  lruk.access(1);
-  lruk.access(2);
-  lruk.access(3);
-  lruk.access(3);
-  lruk.access(3);
-  lruk.access(3);
-  lruk.access(1);
-  lruk.access(2);
+  LruK lruk(8, 3);
+  lruk.Access(1);
+  lruk.Access(2);
+  lruk.Access(3);
+  lruk.Access(3);
+  lruk.Access(3);
+  lruk.Access(3);
+  lruk.Access(1);
+  lruk.Access(2);
 
   frame_id_t id;
-  bool evict_flag = lruk.evict(&id);
+  bool evict_flag = lruk.Evict(&id);
   EXPECT_EQ(evict_flag, true);
   EXPECT_EQ(id, 1);
 
-  lruk.access(4);
-  lruk.access(2);
+  lruk.Access(4);
+  lruk.Access(2);
 
-  evict_flag = lruk.evict(&id);
+  evict_flag = lruk.Evict(&id);
   EXPECT_EQ(evict_flag, true);
   EXPECT_EQ(id, 4);
 
-  evict_flag = lruk.evict(&id);
+  evict_flag = lruk.Evict(&id);
   EXPECT_EQ(evict_flag, true);
   EXPECT_EQ(id, 3);
-  evict_flag = lruk.evict(&id);
+  evict_flag = lruk.Evict(&id);
   EXPECT_EQ(evict_flag, true);
   EXPECT_EQ(id, 2);
-  EXPECT_EQ(lruk.size(), 0);
+  EXPECT_EQ(lruk.Size(), 0);
 
-  lruk.access(1);
-  lruk.access(2);
-  lruk.access(3);
-  lruk.access(4);
+  lruk.Access(1);
+  lruk.Access(2);
+  lruk.Access(3);
+  lruk.Access(4);
   lruk.SetEvictable(1, false);
-  evict_flag = lruk.evict(&id);
+  evict_flag = lruk.Evict(&id);
   EXPECT_EQ(evict_flag, true);
   EXPECT_EQ(id, 2);
-  EXPECT_EQ(lruk.size(), 3);
-  evict_flag = lruk.evict(&id);
+  EXPECT_EQ(lruk.Size(), 3);
+  evict_flag = lruk.Evict(&id);
   EXPECT_EQ(evict_flag, true);
   EXPECT_EQ(id, 3);
-  evict_flag = lruk.evict(&id);
+  evict_flag = lruk.Evict(&id);
   EXPECT_EQ(evict_flag, true);
   EXPECT_EQ(id, 4);
-  EXPECT_EQ(lruk.size(), 1);
+  EXPECT_EQ(lruk.Size(), 1);
 }
 
 }  // namespace bustub

@@ -16,43 +16,43 @@ std::unordered_map<char, std::unique_ptr<TrieNode>> children_;
 // 注意，这里统一使用了unique_ptr智能指针对数据进行管理，这样的好处就是TrieNode只能当一颗Trie的节点，不会出现连接到其他Trie上的情况
 ```
 
-* [ ] `TrieNode(char key_char)`
+* [X] `TrieNode(char key_char)`
 
 - 构造函数，对一个节点赋值key，并且标记为非终端节点
 
-* [ ] `TrieNode(TrieNode &&other_trie_node)`
+* [X] `TrieNode(TrieNode &&other_trie_node)`
 
 - 移动拷贝构造函数
 
-* [ ] `bool HasChild(char key_char)`
+* [X] `bool HasChild(char key_char)`
 
 - 判断节点是否有key为key_char孩子节点，直接根据map进行查询即可
 
-* [ ] bool HasChildren()
+* [X] bool HasChildren()
 
 - 判断节点是否有任意一个孩子，直接判断map是不是empty
 
-* [ ] bool IsEndNode()
+* [X] bool IsEndNode()
 
 - 直接返回是否为终端节点变量即可
 
-* [ ] char GetKeyChar()
+* [X] char GetKeyChar()
 
 - 得到当前节点存储的key值
 
-* [ ] std::unique_ptr `<TrieNode>` *InsertChildNode(charkey_char, std::unique_ptr `<TrieNode>` &&child)
+* [X] std::unique_ptr `<TrieNode>` *InsertChildNode(charkey_char, std::unique_ptr `<TrieNode>` &&child)
 
 - 插入孩子节点，先看chidlren_map中是否已经存在对应的key值了，日报存在直接返回null，如果不存在就直接插入即可。
 
-* [ ] std::unique_ptr `<TrieNode>` *InsertChildNode(charkey_char, std::unique_ptr `<TrieNode>` &&child)
+* [X] std::unique_ptr `<TrieNode>` *InsertChildNode(charkey_char, std::unique_ptr `<TrieNode>` &&child)
 
 - 同理
 
-* [ ] void RemoveChildNode(char key_char)
+* [X] void RemoveChildNode(char key_char)
 
 - 直接在chidren_map中删除就行了，不需要考虑内存管理，因为我们使用了unique_ptr对象，自动帮我们销毁对象
 
-* [ ] void SetEndNode(bool is_end)
+* [X] void SetEndNode(bool is_end)
 
 - 设置为终端节点
 
@@ -66,7 +66,7 @@ explicit TrieNodeWithValue(char key_char, T value) // 重新构建
 
 ```
 
-* [ ] T GetValue();
+* [X] T GetValue();
 
 - 返回节点中的Value，因为Value属于T的泛型，所以要加上T
 
@@ -74,13 +74,23 @@ explicit TrieNodeWithValue(char key_char, T value) // 重新构建
 
 Trie是最终的字典类，有一个关键的结构为root_，一切查找都从这里查，root_被初始化key_char为 `a`
 
-* [ ] bool Insert(conststd::string &key, T value)
+* [X] bool Insert(conststd::string &key, T value)
 
 - 向Trie中插入一个kv对，思路就是从root开始逐层遍历，注意如果某个key已经存在，我们需要直接返回，原来的值不能被修改
 
-* [ ] bool Remove(conststd::string &key)
+* [X] bool Remove(conststd::string &key)
 
 - remove的思路很简单，使用递归来实现，如果递归到最后一个字符了，判断一下是否为终端节点，如果是终端节点，那么我们就返回false，如果是终端节点但是还有孩子节点，那么就不能直接删除了，我们需要直接将其标记为非终端节点即可
+
+* [X] `T GetValue(const std::string &key, bool* success)`
+
+- 返回对应key的value值
+
+##### 踩坑记录
+
+1. 为了保证线程安全，我们加上了读写锁，但是忽略了一点，就是我们实现的代码里面有递归操作，会导致死锁，所以将锁换成可重入锁就行了
+
+
 
 ### Project 1
 
@@ -116,6 +126,64 @@ bool is_dirty_ // 是否为脏页
 ##### extendible_hash_table
 
 ##### LRUK_Replacer
+
+我的LRUK_Replacer实现思路是，第一层为FIFO队列，第二层为LRU队列。这两个队列都是以双向循环链表为基础实现的。其中为了对LRUK的实现提供支持，我对双向循环链表添加了一个根据 `visite_count_`有序插入的函数，如下：
+
+```cpp
+auto DoubleLinkedList<Key>::InsertOrdered(Node *node) -> bool;
+```
+
+为了支持LRUK的evict操作，我们将根据如下表寻找第一个被淘汰的节点
+
+```cpp
+auto DoubleLinkedList<Key>::FindFirstEvictableNode() -> Node *;
+```
+
+因为 `history_list(fifo_list)`和 `lru_list`都有一个特点，就是即将淘汰的放在首位，对于前者我们根据visite_count_进行排序，对于后者我们将最近访问的元素放在链表尾处
+
+实现了上述的双向循环链表之后，lru_k的实现就简单很多了。
+
+```cpp
+
+class LruK {
+  using Node = DoubleLinkedList<frame_id_t>::Node;
+  using LRU_List = DoubleLinkedList<frame_id_t>;
+  using History_List = DoubleLinkedList<frame_id_t>;
+  using Map = std::unordered_map<frame_id_t, Node *>;
+
+  int capacity_;
+  int k_;
+
+  LRU_List lru_cache_;
+  History_List history_cache_;
+  Map history_map_;
+  Map lru_map_;
+
+ public:
+  LruK(int size, int K);
+/*
+Access实现思路，有两层cache，第一层由history_list组层的有序链表，第二层由lru_list组层的链表，其中两层都有对应的哈希表做访问加速。
+
+首先访问第一层，第一层如果命中，看访问次数是否达到k次，如果达到则插入到第二层
+如果第一层没有命中，则去访问第二层，第二层命中之后更新cache的排序
+*/
+  void Access(frame_id_t id);
+/*
+Evict实现思路：
+先淘汰第一层history_list中的元素，从history_list第一个节点开始遍历，如果节点设置为可淘汰的，那么淘汰掉
+如果第一层没有可淘汰的，那么就淘汰第二层lru_list中的元素，从lru_list第一个节点开始遍历，如果节点设置为可淘汰的，那么淘汰掉
+*/
+  auto Evict(frame_id_t *id) -> bool;
+  auto Contained(frame_id_t id) -> bool;
+  auto SetEvictable(frame_id_t id, bool evictable) -> bool;
+  auto Remove(frame_id_t id) -> bool;
+
+  auto Size() -> int;
+  auto IsFull() -> bool;
+};
+
+```
+
 
 ##### BufferPoolManagerInstance
 

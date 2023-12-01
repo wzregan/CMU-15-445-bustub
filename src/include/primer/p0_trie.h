@@ -385,6 +385,7 @@ class Trie {
    */
   template <typename T>
   T GetValue(const std::string &key, bool *success) {
+    // 加上读锁，因为读的过程中不会写任何数据
     latch_.RLock();
     std::unique_ptr<bustub::TrieNode> *node = &root_;
     for (char ch : key) {
@@ -396,9 +397,10 @@ class Trie {
         return {};
       }
     }
-
+    // 遍历到最后一个char对象的节点，判断一下是否为终端节点
     if ((*node) != nullptr && (*node)->IsEndNode()) {
       TrieNode *node_ori = (*node).get();
+      // 将其转化为node_with_value类型的节点
       auto *node_with_value = dynamic_cast<TrieNodeWithValue<T> *>(node_ori);
       if (node_with_value == nullptr) {
         (*success) = false;
