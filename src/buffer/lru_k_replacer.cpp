@@ -152,7 +152,10 @@ auto DoubleLinkedList<Key>::InsertOrdered(Node *node) -> bool {
     InsertFrontNode(node);
     return true;
   }
+<<<<<<< HEAD
   // 如果有别的数据，那么就开始遍历链表，找到第一个visite_count大于node->visite_count的节点
+=======
+>>>>>>> origin/master
   while (temp != head_ && temp->visite_count_ <= node->visite_count_) {
     temp = temp->next_;
   }
