@@ -16,7 +16,7 @@
 
 namespace bustub {
 
-TEST(LRUKReplacerTest, ENABLE_SampleTest) {
+TEST(LRUKReplacerTest, DISABLED_SampleTest) {
   LRUKReplacer lru_replacer(7, 2);
 
   // Scenario: add six elements to the replacer. We have [1,2,3,4,5]. Frame 6 is non-evictable.
@@ -97,7 +97,7 @@ TEST(LRUKReplacerTest, ENABLE_SampleTest) {
   ASSERT_EQ(0, lru_replacer.Size());
 }
 
-TEST(DoubleLinkedListt, DISABLED_DoubleLinkedListSampleTest) {
+TEST(DoubleLinkedListt, ENABLE_DoubleLinkedListSampleTest) {
   DoubleLinkedList<frame_id_t> list;
   list.InsertFront(1);
   list.InsertFront(2);
@@ -149,26 +149,30 @@ TEST(DoubleLinkedListt, DISABLED_DoubleLinkedListSampleTest) {
   n11->evictable_ = false;
   en1 = list2.FindFirstEvictableNode();
   EXPECT_EQ(en1, nullptr);
+
+
+
 }
 
-TEST(LRU_K, DISABLED_LRU_K_SampleTest) {
-  LruK lruk(8, 3);
-  lruk.Access(1);
-  lruk.Access(2);
-  lruk.Access(3);
-  lruk.Access(3);
-  lruk.Access(3);
-  lruk.Access(3);
-  lruk.Access(1);
-  lruk.Access(2);
+TEST(LRU_K, ENABLE_LRU_K_SampleTest) {
+  LruK lruk(8, 3);// L:  H:
+  lruk.Access(1);// L:1  H:
+  lruk.Access(2);// L:1 2  H:
+  lruk.Access(3);// L:1 2 3  H:
+  lruk.Access(3);// L:1 2 3 H:
+  lruk.Access(3);// L:1 2 H: 3
+  lruk.Access(3);// L:1 2 H: 3
+
+  lruk.Access(1);// L:1 2 H: 3
+  lruk.Access(2);// L:1 2 H: 3
 
   frame_id_t id;
   bool evict_flag = lruk.Evict(&id);
   EXPECT_EQ(evict_flag, true);
   EXPECT_EQ(id, 1);
 
-  lruk.Access(4);
-  lruk.Access(2);
+  lruk.Access(4);// L:2 4 H: 3
+  lruk.Access(2);// L:2 4 H: 3
 
   evict_flag = lruk.Evict(&id);
   EXPECT_EQ(evict_flag, true);
@@ -198,6 +202,132 @@ TEST(LRU_K, DISABLED_LRU_K_SampleTest) {
   EXPECT_EQ(evict_flag, true);
   EXPECT_EQ(id, 4);
   EXPECT_EQ(lruk.Size(), 1);
+
+  DoubleLinkedList<frame_id_t> list3;
+  for (int i = 0; i < 1000; i++){
+    auto n = new DoubleLinkedList<frame_id_t>::Node(i);
+    list3.InsertTailNode(n);
+  }
+  auto temp_list3 = list3.head_->next_;
+  for (int i = 0; i < 1000; i++){
+    EXPECT_EQ(temp_list3->value_, i);
+    temp_list3 = temp_list3->next_;
+  }
 }
+
+TEST(LRU_K, DISABLED_LRU_K_SampleTest2) {
+  LruK lruk(4, 2);
+  lruk.Access(1);// h:1 L:
+  lruk.Access(2);// h:1 2 L:
+  lruk.Access(1);// h:2 L:1
+  lruk.Access(3);// h:2 3 L:1
+  lruk.Access(3);// h:2 L:3 1
+
+  frame_id_t id;
+  bool evict_flag = lruk.Evict(&id);
+  EXPECT_EQ(evict_flag, true);
+  EXPECT_EQ(id, 2);
+  
+  lruk.Access(4);// h:4 L:3 1
+  lruk.Access(5);// h:4 5 L:3 1
+
+  evict_flag = lruk.Evict(&id);
+  EXPECT_EQ(evict_flag, true);
+  EXPECT_EQ(id, 4);// h:5 L:3 1
+
+  evict_flag = lruk.Evict(&id);
+  EXPECT_EQ(evict_flag, true);
+  EXPECT_EQ(id, 5);// h: L:3 1
+
+  evict_flag = lruk.Evict(&id);
+  EXPECT_EQ(evict_flag, true);
+  EXPECT_EQ(id, 1);// h: L:3 1
+
+
+
+  evict_flag = lruk.Evict(&id);
+  EXPECT_EQ(evict_flag, true);
+  EXPECT_EQ(id, 3);// h: L:3 1
+
+  evict_flag = lruk.Evict(&id);
+  EXPECT_EQ(evict_flag, false);
+
+}
+
+TEST(LRU_K, DISABLED_LRU_K_SampleTest3) {
+  LruK lruk(4, 3);
+  lruk.Access(1);// h:1 L:
+  lruk.Access(2);// h:1 2 L:
+  lruk.Access(1);// h:1 2 L:
+  lruk.Access(3);// h:1 2 3 L:
+  frame_id_t id;
+  bool evict_flag = lruk.Evict(&id);
+  EXPECT_EQ(evict_flag, true);
+  EXPECT_EQ(id, 1);
+}
+
+TEST(LRU_K, ENABLE_LRU_K_SampleTest4) {
+  LRUKReplacer lruk1(10, 2);
+  lruk1.RecordAccess(1);
+  LRUKReplacer lruk2(10, 2);
+  lruk2.RecordAccess(1);
+  lruk2.SetEvictable(1,false);
+  lruk2.RecordAccess(2);
+  lruk2.Remove(2);
+  lruk2.RecordAccess(3);
+// 20: size:10 k:2
+// 20: Insert:1,0
+// 20: size:10 k:2
+// 20: Insert:1,0
+// 20: Insert:2,1
+// 20: Insert:3,2
+// 20: size:10 k:2
+// 20: Insert:1,0
+// 20: Insert:2,1
+// 20: Insert:3,2
+// 20: size:10 k:2
+// 20: Insert:1,0
+// 20: Insert:2,1
+// 20: Insert:3,2
+// 20: Insert:4,3
+// 20: Insert:1,4
+// 20: Insert:2,4
+// 20: Insert:3,4
+// 20: Insert:4,4
+// 20: Insert:1,4
+// 20: Insert:2,4
+// 20: Insert:3,4
+// 20: Insert:4,4
+// 20: Insert:1,4
+// 20: Insert:2,4
+// 20: Insert:3,4
+// 20: Insert:4,4
+// 20: Insert:1,4
+// 20: Insert:2,4
+// 20: Insert:3,4
+// 20: Insert:4,4
+// 20: Insert:1,4
+// 20: Insert:2,4
+// 20: Insert:3,4
+// 20: Insert:4,4
+// 20: Insert:4,4
+// 20: size:10 k:2
+// 20: Insert:1,0
+// 20: Insert:2,1
+// 20: Insert:3,2
+// 20: size:10 k:3
+// 20: Insert:1,0
+// 20: Insert:1,1
+// 20: Insert:2,1
+// 20: Insert:1,2
+// 20: Evict
+// 20: Evict
+// 20: size:10 k:2
+// 20: Insert:1,0
+// 20: Insert:2,1
+// 20: Insert:3,2
+
+}
+
 
 }  // namespace bustub

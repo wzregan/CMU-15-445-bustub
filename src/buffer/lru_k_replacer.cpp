@@ -9,7 +9,6 @@
 // Copyright (c) 2015-2022, Carnegie Mellon University Database Group
 //
 //===----------------------------------------------------------------------===//
-
 #include "buffer/lru_k_replacer.h"
 namespace bustub {
 
@@ -27,11 +26,11 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   std::scoped_lock sl(this->latch_);
-  BUSTUB_ASSERT(evict_able_size_ + evict_disable_size_ < static_cast<int>(replacer_size_), "LRK out of specific size");
   if (!lru_k_.Contained(frame_id)) {
     this->evict_able_size_++;
   }
   lru_k_.Access(frame_id);
+  BUSTUB_ASSERT(evict_able_size_ + evict_disable_size_ <= static_cast<int>(replacer_size_), "LRK out of specific size");
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
@@ -64,7 +63,7 @@ auto LRUKReplacer::Size() -> size_t { return this->evict_able_size_; }
 template <class Key>
 DoubleLinkedList<Key>::Node::Node(Key frame_id) : pre_(nullptr), next_(nullptr), value_(frame_id) {}
 template <class Key>
-DoubleLinkedList<Key>::Node::Node(Key frame_id, int vc) : value_(frame_id), visite_count_(vc) {}
+DoubleLinkedList<Key>::Node::Node(Key frame_id, int vc) : pre_(nullptr), next_(nullptr), value_(frame_id), visite_count_(vc) {}
 template <class Key>
 bustub::DoubleLinkedList<Key>::DoubleLinkedList() {
   head_ = new Node({});
@@ -168,7 +167,6 @@ template <class Key>
 bustub::DoubleLinkedList<Key>::~DoubleLinkedList() {
   Node *delted_node = head_->next_;
   Node *temp = delted_node->next_;
-
   while (delted_node != head_) {
     temp = delted_node->next_;
     delete delted_node;
@@ -198,9 +196,6 @@ void bustub::LruK::Access(frame_id_t id) {
       lru_cache_.InsertTailNode(node);          // 将其插入到第二层cache中
       lru_map_[id] = node;
       history_map_.erase(id);
-    } else {
-      history_cache_.RemoveNodeFromList(node);
-      history_cache_.InsertOrdered(node);
     }
   } else {
     // 如果两层cache都没有命中，那么就执行插入操作
@@ -211,13 +206,14 @@ void bustub::LruK::Access(frame_id_t id) {
     }
     // 如果没有满，则插入
     Node *new_node = new Node(id, 1);
-    history_cache_.InsertOrdered(new_node);
+    history_cache_.InsertTailNode(new_node);
     history_map_[id] = new_node;
   }
   // 如果两层
 }
 
 auto bustub::LruK::Evict(frame_id_t *id) -> bool {
+
   // 先从历史链表中寻找
   if (history_cache_.Size() > 0) {
     Node *ret = history_cache_.FindFirstEvictableNode();  // 从头开始找，找到第一个可以驱逐的结点，然后驱逐
@@ -263,12 +259,14 @@ auto bustub::LruK::Remove(frame_id_t id) -> bool {
     Node *temp = history_map_[id];
     history_map_.erase(id);
     history_cache_.RemoveNodeFromList(temp);
+    delete temp;
     return true;
   }
   if (lru_map_.count(id) > 0) {
     Node *temp = lru_map_[id];
     lru_map_.erase(id);
     lru_cache_.RemoveNodeFromList(temp);
+    delete temp;
     return true;
   }
   return false;
