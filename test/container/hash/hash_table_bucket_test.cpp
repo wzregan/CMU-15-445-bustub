@@ -19,7 +19,7 @@ TEST(HASH_TABLE_BUCKET_TEST, DISABLED_INSERT_TEST) {
   EXPECT_FALSE(bucket.IsFull());
   EXPECT_TRUE(bucket.Insert("name", 111));
   EXPECT_TRUE(bucket.IsFull());
-  EXPECT_TRUE(bucket.contained("height"));
+  EXPECT_TRUE(bucket.Contained("height"));
 }
 TEST(HASH_TABLE_BUCKET_TEST, DISABLED_HASHTAB_TEST) {
   bustub::ExtendibleHashTable<string, int> tab(2L);
