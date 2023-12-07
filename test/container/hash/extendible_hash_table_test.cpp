@@ -11,7 +11,7 @@ using std::string;
 namespace bustub {
 TEST(ExtendibleHashTableTest, ENABLED_SampleTest3) {
   auto table = std::make_unique<ExtendibleHashTable<int, std::string>>(4);
-  table->Insert(4, "a");  
+  table->Insert(4, "a");
   table->Insert(12, "a");
   table->Insert(16, "a");
   table->Insert(64, "a");
@@ -26,10 +26,9 @@ TEST(ExtendibleHashTableTest, ENABLED_SampleTest3) {
   table->Insert(21, "a");
   table->Insert(11, "a");
   table->Insert(19, "a");
-  std::cout<<table->GetLocalDepth(5)<<"\n";
+  std::cout << table->GetLocalDepth(5) << "\n";
 
   EXPECT_EQ(3, table->GetLocalDepth(3));
-
 }
 
 TEST(ExtendibleHashTableTest, ENABLED_SampleTest2) {
@@ -60,11 +59,10 @@ TEST(ExtendibleHashTableTest, ENABLED_SampleTest2) {
   EXPECT_EQ(table->GetGlobalDepth(), 3);
   EXPECT_EQ(table->dir_[0]->GetItems().size(), 2);
   string v;
-  
-  EXPECT_EQ(table->Find(10000,v),false);
 
+  EXPECT_EQ(table->Find(10000, v), false);
 }
-TEST(ExtendibleHashTableTest,ENABLED_SampleTest) {
+TEST(ExtendibleHashTableTest, ENABLED_SampleTest) {
   auto table = std::make_unique<ExtendibleHashTable<int, std::string>>(2);
   EXPECT_EQ(0, table->GetGlobalDepth());
   EXPECT_EQ(0, table->GetLocalDepth(0));
@@ -92,7 +90,6 @@ TEST(ExtendibleHashTableTest,ENABLED_SampleTest) {
   EXPECT_EQ(2, table->GetLocalDepth(3));
   EXPECT_EQ(3, table->GetLocalDepth(5));
 
-
   std::string result;
   table->Find(9, result);
   EXPECT_EQ("i", result);
@@ -109,29 +106,22 @@ TEST(ExtendibleHashTableTest,ENABLED_SampleTest) {
 
   auto table2 = std::make_unique<ExtendibleHashTable<int, int>>(2);
   int result2 = 0;
-  for (int i = 0; i < 1000;i++)
-  {
-    table2->Insert(i, i*i);
+  for (int i = 0; i < 1000; i++) {
+    table2->Insert(i, i * i);
     table2->Find(i, result2);
-    EXPECT_EQ(i *i, result2);
+    EXPECT_EQ(i * i, result2);
   }
-  for (int i = 0; i < 1000;i++)
-  {
-    
+  for (int i = 0; i < 1000; i++) {
     EXPECT_EQ(table2->Remove(i), true);
   }
-  for (int i = 0; i < 1000;i++)
-  {
+  for (int i = 0; i < 1000; i++) {
     EXPECT_EQ(false, table2->Find(i, result2));
   }
-    for (int i = 0; i < 1000;i++)
-  {
-    table2->Insert(i, i*i);
+  for (int i = 0; i < 1000; i++) {
+    table2->Insert(i, i * i);
     table2->Find(i, result2);
-    EXPECT_EQ(i *i, result2);
+    EXPECT_EQ(i * i, result2);
   }
-
-
 }
 
 TEST(ExtendibleHashTableTest, ENABLED_ConcurrentInsertTest) {

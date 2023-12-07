@@ -55,7 +55,7 @@ std::unordered_map<char, std::unique_ptr<TrieNode>> children_;
 - 直接在chidren_map中删除就行了，不需要考虑内存管理，因为我们使用了unique_ptr对象，自动帮我们销毁对象
 
 * [X] void SetEndNode(bool is_end)
-  ============================
+  ================================
 * [ ] `TrieNode(char key_char)`
 
 - 构造函数，对一个节点赋值key，并且标记为非终端节点
@@ -114,7 +114,6 @@ explicit TrieNodeWithValue(char key_char, T value) // 重新构建
 
 Trie是最终的字典类，有一个关键的结构为root_，一切查找都从这里查，root_被初始化key_char为 `a`
 
-
 * [X] bool Insert(conststd::string &key, T value)
 
 - 向Trie中插入一个kv对，思路就是从root开始逐层遍历，注意如果某个key已经存在，我们需要直接返回，原来的值不能被修改
@@ -138,7 +137,6 @@ Trie是最终的字典类，有一个关键的结构为root_，一切查找都�
 * [ ] bool Remove(conststd::string &key)
 
 - remove的思路很简单，使用递归来实现，如果递归到最后一个字符了，判断一下是否为终端节点，如果是终端节点，那么我们就返回false，如果是终端节点但是还有孩子节点，那么就不能直接删除了，我们需要直接将其标记为非终端节点即可
-
 
 ### Project 1
 
@@ -183,7 +181,6 @@ directory的扩展思路就是将目录的大小resize到原来的两倍，然�
 
 1. 最开始实现可扩展哈希的时候参考的文章是[这篇](https://www.geeksforgeeks.org/extendible-hashing-dynamic-approach-to-dbms/)，这篇文章的可扩展哈希不光目录dir是可扩展的，其bucket也是可扩展的，但是官方给的例子里面，bucket的大小是固定的，所以就导致测试一直过不去。
 2. 注意新克隆出来的bucket其共享槽的方式！ 因为这个
-
 
 ##### LRUK_Replacer
 
@@ -247,8 +244,6 @@ Evict实现思路：
 ##### 踩坑记录
 
 1. 内存泄露导致我检查了好久，一定要注意new和delete搭配起来使用！
-
-
 
 ##### BufferPoolManagerInstance
 

@@ -63,7 +63,8 @@ auto LRUKReplacer::Size() -> size_t { return this->evict_able_size_; }
 template <class Key>
 DoubleLinkedList<Key>::Node::Node(Key frame_id) : pre_(nullptr), next_(nullptr), value_(frame_id) {}
 template <class Key>
-DoubleLinkedList<Key>::Node::Node(Key frame_id, int vc) : pre_(nullptr), next_(nullptr), value_(frame_id), visite_count_(vc) {}
+DoubleLinkedList<Key>::Node::Node(Key frame_id, int vc)
+    : pre_(nullptr), next_(nullptr), value_(frame_id), visite_count_(vc) {}
 template <class Key>
 bustub::DoubleLinkedList<Key>::DoubleLinkedList() {
   head_ = new Node({});
@@ -213,7 +214,6 @@ void bustub::LruK::Access(frame_id_t id) {
 }
 
 auto bustub::LruK::Evict(frame_id_t *id) -> bool {
-
   // 先从历史链表中寻找
   if (history_cache_.Size() > 0) {
     Node *ret = history_cache_.FindFirstEvictableNode();  // 从头开始找，找到第一个可以驱逐的结点，然后驱逐

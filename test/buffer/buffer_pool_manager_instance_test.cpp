@@ -88,8 +88,96 @@ TEST(BufferPoolManagerInstanceTest, ENABLE_BinaryDataTest) {
   delete disk_manager;
 }
 
+TEST(BufferPoolManagerInstanceTest, ENABLE_SampleTest4) {
+  const std::string db_name = "test.db";
+  const size_t buffer_pool_size = 1;
+  const size_t k = 5;
+  auto *disk_manager = new DiskManager(db_name);
+  auto *bpm = new BufferPoolManagerInstance(buffer_pool_size, disk_manager, k);
+  page_id_t pgid;
+  bpm->NewPage(&pgid);
+  bpm->UnpinPage(pgid, true);
+  bpm->FetchPage(pgid);
+  bpm->UnpinPage(pgid, false);
+  Page *p = bpm->FetchPage(pgid);
+  EXPECT_EQ(p->IsDirty(), true);
+
+  delete bpm;
+  delete disk_manager;
+}
+
+TEST(BufferPoolManagerInstanceTest, ENABLE_SampleTest3) {
+  const std::string db_name = "test.db";
+  const size_t buffer_pool_size = 10;
+  const size_t k = 5;
+
+  auto *disk_manager = new DiskManager(db_name);
+  auto *bpm = new BufferPoolManagerInstance(buffer_pool_size, disk_manager, k);
+  page_id_t page_id[22];
+  for (int i = 0; i < 10; i++) {
+    bpm->NewPage(&page_id[i]);
+  }
+  for (int i = 0; i < 10; i++) {
+    bpm->FetchPage(page_id[i]);
+    bpm->UnpinPage(page_id[i], true);
+    bpm->UnpinPage(page_id[i], true);
+  }
+  for (int i = 10; i < 20; i++) {
+    bpm->NewPage(&page_id[i]);
+    bpm->UnpinPage(page_id[i], false);
+  }
+
+  for (int i = 0; i < 10; i++) {
+    bpm->FetchPage(page_id[i]);
+  }
+  bpm->UnpinPage(page_id[4], false);
+  bpm->NewPage(&page_id[20]);
+  bpm->FetchPage(page_id[5]);
+  bpm->FetchPage(page_id[6]);
+  bpm->FetchPage(page_id[7]);
+
+  bpm->UnpinPage(page_id[5], false);
+  bpm->UnpinPage(page_id[6], false);
+  bpm->UnpinPage(page_id[7], false);
+
+  bpm->UnpinPage(page_id[5], false);
+  bpm->UnpinPage(page_id[6], false);
+  bpm->UnpinPage(page_id[7], false);
+
+  bpm->NewPage(&page_id[21]);  // evict 5
+  bpm->FetchPage(page_id[5]);  // evict 6
+  bpm->FetchPage(page_id[7]);
+  bpm->FetchPage(page_id[6]);  // no evcit
+  EXPECT_EQ(bpm->FetchPage(page_id[6]), nullptr);
+
+  bpm->FetchPage(0);
+  EXPECT_TRUE(bpm->UnpinPage(0, true));
+  EXPECT_TRUE(bpm->UnpinPage(0, true));
+
+  delete bpm;
+  delete disk_manager;
+}
+
+TEST(BufferPoolManagerInstanceTest, ENABLE_SampleTest2) {
+  const std::string db_name = "test.db";
+  const size_t buffer_pool_size = 10;
+  const size_t k = 5;
+
+  auto *disk_manager = new DiskManager(db_name);
+  auto *bpm = new BufferPoolManagerInstance(buffer_pool_size, disk_manager, k);
+  page_id_t page_id[10];
+  for (int i = 0; i < 10; i++) {
+    bpm->NewPage(&page_id[i]);
+  }
+  bpm->FetchPage(0);
+  EXPECT_TRUE(bpm->UnpinPage(0, true));
+  EXPECT_TRUE(bpm->UnpinPage(0, true));
+
+  delete bpm;
+  delete disk_manager;
+}
 // NOLINTNEXTLINE
-TEST(BufferPoolManagerInstanceTest, ENABLE_SampleTest) {
+TEST(BufferPoolManagerInstanceTest, ENABLED_SampleTest) {
   const std::string db_name = "test.db";
   const size_t buffer_pool_size = 10;
   const size_t k = 5;

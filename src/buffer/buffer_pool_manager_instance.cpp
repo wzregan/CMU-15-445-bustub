@@ -22,15 +22,16 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   /**
    * 对BufferPoolManager进行初始化操作
    */
-  // we allocate a consecutive memory space for the buffer pool
-  pages_ = new Page[pool_size_];                                               // 初始化page数组，连续的内存
-  page_table_ = new ExtendibleHashTable<page_id_t, frame_id_t>(bucket_size_);  // 初始化page_id -> frame_id 的 映射表
-  replacer_ = new LRUKReplacer(pool_size, 2);                                  // LRUK缓存策略
-
-  // Initially, every page is in the free list.
+  // 初始化page数组，连续的内存
+  pages_ = new Page[pool_size_];
+  // 初始化page_id -> frame_id 的 映射表
+  page_table_ = new ExtendibleHashTable<page_id_t, frame_id_t>(bucket_size_);
+  // LRUK缓存策略
+  replacer_ = new LRUKReplacer(pool_size, replacer_k);
+  // free_list 存放了所有可用的frame_id
   for (size_t i = 0; i < pool_size_; ++i) {
     free_list_.emplace_back(static_cast<int>(i));
-  }  // free_list 存放了所有可用的frame_id
+  }
 
   // TODO(students): remove this line after you have implemented the buffer pool
   // manager throw NotImplementedException(
@@ -46,8 +47,10 @@ BufferPoolManagerInstance::~BufferPoolManagerInstance() {
 }
 
 auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
+  latch_.lock();
   // 如果没有可以使用的页框 且 没有可驱逐的页面，则直接返回
   if (this->free_list_.empty() && this->replacer_->Size() == 0) {
+    latch_.unlock();
     return nullptr;
   }
   frame_id_t f_id;
@@ -62,19 +65,28 @@ auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
     replacer_->SetEvictable(f_id, false);
     pages_[f_id].pin_count_++;
     *page_id = new_page_id;
+    latch_.unlock();
     return &pages_[f_id];
   }
   // 如果free_list中没有，那么我们就驱逐一个页
   replacer_->Evict(&f_id);
   page_id_t p_id = this->pages_[f_id].GetPageId();
-  this->DeletePgImp(p_id);  // 删除这个页面
+  latch_.unlock();
+  this->DeletePgImp(p_id);
   return NewPgImp(page_id);
 }
 
 auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
+  latch_.lock();
+
   frame_id_t frame_id;
+
   bool find_able = page_table_->Find(page_id, frame_id);
   if (find_able) {
+    this->replacer_->RecordAccess(frame_id);
+    this->pages_[frame_id].pin_count_++;
+    this->replacer_->SetEvictable(frame_id, false);
+    latch_.unlock();
     return &this->pages_[frame_id];
   }
   // 如果根本没有缓存这个page
@@ -92,20 +104,28 @@ auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
     this->replacer_->RecordAccess(frame_id);
     this->pages_[frame_id].pin_count_++;
     this->replacer_->SetEvictable(frame_id, false);
+
+    latch_.unlock();
     return &this->pages_[frame_id];
   }
 
   if (this->replacer_->Size() > 0) {
     // 如果有可以驱逐的，则先驱逐掉原来的page，然后重新读取数据进page中
     this->replacer_->Evict(&frame_id);
+    printf("evict :%d\n", pages_[frame_id].page_id_);
+
     page_id_t old_page = this->pages_[frame_id].GetPageId();
+    printf("deleted %d\n", this->pages_[frame_id].pin_count_);
+    latch_.unlock();
     this->DeletePgImp(old_page);
     return FetchPgImp(page_id);
   }
+  latch_.unlock();
   return nullptr;
 }
 
 auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> bool {
+  std::scoped_lock sl(this->latch_);
   frame_id_t frame_id;
   bool find_able = page_table_->Find(page_id, frame_id);
   if (!find_able) {
@@ -115,18 +135,21 @@ auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> 
   // 先看pin值是否为0，如果为0则直接返回
   if (this->pages_[frame_id].pin_count_ > 0) {
     this->pages_[frame_id].pin_count_--;
-    this->pages_[frame_id].is_dirty_ = is_dirty;
+    this->pages_[frame_id].is_dirty_ |= is_dirty;
   } else {
+    this->pages_[frame_id].is_dirty_ |= is_dirty;
     return false;
   }
   // 更新完pin数值之后，然后对更新evictable
   if (this->pages_[frame_id].pin_count_ == 0) {
+    this->pages_[frame_id].is_dirty_ |= is_dirty;
     this->replacer_->SetEvictable(frame_id, true);
   }
   return true;
 }
 
 auto BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) -> bool {
+  std::scoped_lock sl(this->latch_);
   frame_id_t frame_id;
   bool find_able = this->page_table_->Find(page_id, frame_id);
   // 如果这个页不存在
@@ -141,6 +164,7 @@ auto BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) -> bool {
 }
 
 void BufferPoolManagerInstance::FlushAllPgsImp() {
+  std::scoped_lock sl(this->latch_);
   for (int i = 0; i < static_cast<int>(pool_size_); i++) {
     if (this->pages_[i].GetPageId() != INVALID_PAGE_ID) {
       this->FlushPage(this->pages_[i].GetPageId());
@@ -149,24 +173,30 @@ void BufferPoolManagerInstance::FlushAllPgsImp() {
 }
 
 auto BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) -> bool {
+  std::scoped_lock lock(latch_);
   frame_id_t frame_id;
   bool find_able = page_table_->Find(page_id, frame_id);
   if (!find_able) {
     // 如果没有找到，则直接返回false
+    return true;
+  }
+
+  if (pages_[frame_id].pin_count_ > 0) {
     return false;
   }
+
   // 从hash中删除page_id的映射
   if (this->pages_[frame_id].is_dirty_) {
     FlushPgImp(page_id);
   }
   page_table_->Remove(page_id);
   this->pages_[frame_id].is_dirty_ = false;
-
   // 然后将空闲的frame添加进对应的free_list中
   free_list_.push_back(frame_id);
   this->pages_[frame_id].is_dirty_ = false;
   this->pages_[frame_id].page_id_ = INVALID_PAGE_ID;
   this->pages_[frame_id].SetLSN(0);
+  DeallocatePage(page_id);
   return true;
 }
 

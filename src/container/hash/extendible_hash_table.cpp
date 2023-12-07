@@ -15,17 +15,19 @@
 #include <functional>
 #include <list>
 #include <utility>
+#include <vector>
+
 #include "container/hash/extendible_hash_table.h"
 #include "container/hash/hash_function.h"
 #include "storage/page/page.h"
-#include <vector>
 namespace bustub {
 
 template <typename K, typename V>
-ExtendibleHashTable<K, V>::ExtendibleHashTable(size_t bucket_size)
-    : global_depth_(0), bucket_size_(bucket_size) {
+ExtendibleHashTable<K, V>::ExtendibleHashTable(size_t bucket_size) : global_depth_(0), bucket_size_(bucket_size) {
   num_buckets_ = pow(bucket_size_, global_depth_);
-  dir_ = std::vector<std::shared_ptr<bustub::ExtendibleHashTable<K, V>::Bucket>>(num_buckets_, std::shared_ptr<Bucket>());
+  num_buckets_ = pow(bucket_size_, global_depth_);
+  dir_ =
+      std::vector<std::shared_ptr<bustub::ExtendibleHashTable<K, V>::Bucket>>(num_buckets_, std::shared_ptr<Bucket>());
   for (int i = 0; i < num_buckets_; i++) {
     dir_[i].reset(new Bucket(bucket_size_, 0, i));
   }
@@ -71,11 +73,14 @@ auto ExtendibleHashTable<K, V>::GetNumBucketsInternal() const -> int {
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::Find(const K &key, V &value) -> bool {
+  latch_.lock();
   uint64_t dir_idx = IndexOf(key);
   if (!dir_[dir_idx]) {
     return false;
   }
-  return dir_[dir_idx]->Find(key, value);
+  bool ret = dir_[dir_idx]->Find(key, value);
+  latch_.unlock();
+  return ret;
 }
 
 template <typename K, typename V>
@@ -101,13 +106,13 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
   dir_[dir_idx]->Insert(key, value);
   // 然后判断一下当前目录对应的bucket是否超出了容量，如果超出了，那我们就需要对其进行分裂
   bool extend_flag = dir_[dir_idx]->OutOfCapacity();
-
-  if (!extend_flag) {  // 判断有没有满，如果满的话，那么我们就需要对bucket进行分裂，以及增加深度
+  // 判断有没有满，如果满的话，那么我们就需要对bucket进行分裂，以及增加深度
+  if (!extend_flag) {
     latch_.unlock();
     return;
   }
   // 如果满的话该bucket的local_depth将会递增
-  int dir_idx_depth = dir_[dir_idx]->IncrementDepth();  // 满了，则bucket的深度+1
+  int dir_idx_depth = dir_[dir_idx]->IncrementDepth();
 
   // 如果local_depth 大于 global_depth了，那么就需要对dir进行扩展了
   if (dir_idx_depth > GetGlobalDepth()) {
@@ -130,7 +135,7 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
 // Bucket
 //===--------------------------------------------------------------------===//
 template <typename K, typename V>
-auto ExtendibleHashTable<K, V>::Bucket::Contained(const K &key) ->bool {
+auto ExtendibleHashTable<K, V>::Bucket::Contained(const K &key) -> bool {
   for (auto iter = list_.begin(); iter != list_.end(); iter++) {
     if ((*iter).first == key) {
       return true;
@@ -143,8 +148,7 @@ auto ExtendibleHashTable<K, V>::Bucket::Contained(const K &key) ->bool {
 // mdi指的是，指向当前bucket的最小的目录下标
 template <typename K, typename V>
 ExtendibleHashTable<K, V>::Bucket::Bucket(size_t array_size, int depth, int mdi)
-    : min_diridx_(mdi), size_(array_size), depth_(depth) {
-  }
+    : min_diridx_(mdi), size_(array_size), depth_(depth) {}
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::SplitBucket(int dir_idx) -> std::shared_ptr<Bucket> {
@@ -157,7 +161,8 @@ auto ExtendibleHashTable<K, V>::SplitBucket(int dir_idx) -> std::shared_ptr<Buck
   int current_modify_pointer = pointed_min_dir_idx;
 
   int distance = pow(2, GetLocalDepth(dir_idx) - 1);
-  std::shared_ptr<Bucket> new_temp1 = std::make_shared<Bucket>(bucket_size_, GetLocalDepth(dir_idx), pointed_min_dir_idx);
+  std::shared_ptr<Bucket> new_temp1 =
+      std::make_shared<Bucket>(bucket_size_, GetLocalDepth(dir_idx), pointed_min_dir_idx);
   std::shared_ptr<Bucket> new_temp2 =
       std::make_shared<Bucket>(bucket_size_, GetLocalDepth(dir_idx), pointed_min_dir_idx + distance);
   bool flag = true;
@@ -178,7 +183,8 @@ auto ExtendibleHashTable<K, V>::SplitBucket(int dir_idx) -> std::shared_ptr<Buck
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::ExtendDirectory() -> int {
   // 扩咱的方法简单
-  // 1. 讲原来的dir的大小变为原来的两倍，多出来的空间，将原来的dir复制到新增加的空间中
+  // 1.
+  // 讲原来的dir的大小变为原来的两倍，多出来的空间，将原来的dir复制到新增加的空间中
   size_t start = dir_.size();
   size_t copy_cursor = 0;
 

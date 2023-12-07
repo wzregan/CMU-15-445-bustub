@@ -114,18 +114,16 @@ class ExtendibleHashTable : public HashTable<K, V> {
    * Bucket class for each hash table bucket that the directory points to.
    */
   class Bucket {
-   public:
    private:
     int min_diridx_;
-    bool expand_able{false};
+    bool expand_able_{false};
+
    public:
     auto Contained(const K &key) -> bool;
     explicit Bucket(size_t size = 2, int depth = 0, int mdi = -1);
     /** @brief Check if a bucket is full. */
     inline auto IsFull() const -> bool { return static_cast<int>(list_.size()) >= GetCapacity(); }
-    
     inline auto OutOfCapacity() const -> bool { return static_cast<int>(list_.size()) > GetCapacity(); }
-
     inline auto GetMinDirIdx() { return min_diridx_; }
 
     /** @brief Get the local depth of the bucket. */
@@ -136,9 +134,9 @@ class ExtendibleHashTable : public HashTable<K, V> {
 
     inline auto GetItems() -> std::list<std::pair<K, V>> & { return list_; }
 
-    inline auto GetCapacity() const -> int { 
-      if (expand_able){
-        return pow(this->size_, this->depth_); 
+    inline auto GetCapacity() const -> int {
+      if (expand_able_) {
+        return pow(this->size_, this->depth_);
       }
       return size_;
     }
