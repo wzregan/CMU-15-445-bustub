@@ -16,7 +16,43 @@ std::unordered_map<char, std::unique_ptr<TrieNode>> children_;
 // 注意，这里统一使用了unique_ptr智能指针对数据进行管理，这样的好处就是TrieNode只能当一颗Trie的节点，不会出现连接到其他Trie上的情况
 ```
 
-<<<<<<< HEAD
+
+* [X] `TrieNode(char key_char)`
+
+- 构造函数，对一个节点赋值key，并且标记为非终端节点
+
+* [X] `TrieNode(TrieNode &&other_trie_node)`
+
+- 移动拷贝构造函数
+
+* [X] `bool HasChild(char key_char)`
+
+- 判断节点是否有key为key_char孩子节点，直接根据map进行查询即可
+
+* [X] bool HasChildren()
+
+- 判断节点是否有任意一个孩子，直接判断map是不是empty
+
+* [X] bool IsEndNode()
+
+- 直接返回是否为终端节点变量即可
+
+* [X] char GetKeyChar()
+
+- 得到当前节点存储的key值
+
+* [X] std::unique_ptr `<TrieNode>` *InsertChildNode(charkey_char, std::unique_ptr `<TrieNode>` &&child)
+
+- 插入孩子节点，先看chidlren_map中是否已经存在对应的key值了，日报存在直接返回null，如果不存在就直接插入即可。
+
+* [X] std::unique_ptr `<TrieNode>` *InsertChildNode(charkey_char, std::unique_ptr `<TrieNode>` &&child)
+
+- 同理
+
+* [X] void RemoveChildNode(char key_char)
+
+- 直接在chidren_map中删除就行了，不需要考虑内存管理，因为我们使用了unique_ptr对象，自动帮我们销毁对象
+- [X] void SetEndNode(bool is_end)
 
 * [X] `TrieNode(char key_char)`
 
@@ -55,44 +91,6 @@ std::unordered_map<char, std::unique_ptr<TrieNode>> children_;
 - 直接在chidren_map中删除就行了，不需要考虑内存管理，因为我们使用了unique_ptr对象，自动帮我们销毁对象
 
 * [X] void SetEndNode(bool is_end)
-  ================================
-* [ ] `TrieNode(char key_char)`
-
-- 构造函数，对一个节点赋值key，并且标记为非终端节点
-
-* [ ] `TrieNode(TrieNode &&other_trie_node)`
-
-- 移动拷贝构造函数
-
-* [ ] `bool HasChild(char key_char)`
-
-- 判断节点是否有key为key_char孩子节点，直接根据map进行查询即可
-
-* [ ] bool HasChildren()
-
-- 判断节点是否有任意一个孩子，直接判断map是不是empty
-
-* [ ] bool IsEndNode()
-
-- 直接返回是否为终端节点变量即可
-
-* [ ] char GetKeyChar()
-
-- 得到当前节点存储的key值
-
-* [ ] std::unique_ptr `<TrieNode>` *InsertChildNode(charkey_char, std::unique_ptr `<TrieNode>` &&child)
-
-- 插入孩子节点，先看chidlren_map中是否已经存在对应的key值了，日报存在直接返回null，如果不存在就直接插入即可。
-
-* [ ] std::unique_ptr `<TrieNode>` *InsertChildNode(charkey_char, std::unique_ptr `<TrieNode>` &&child)
-
-- 同理
-
-* [ ] void RemoveChildNode(char key_char)
-
-- 直接在chidren_map中删除就行了，不需要考虑内存管理，因为我们使用了unique_ptr对象，自动帮我们销毁对象
-
-* [ ] void SetEndNode(bool is_end)
 
 - 设置为终端节点
 
