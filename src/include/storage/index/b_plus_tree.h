@@ -21,6 +21,14 @@
 
 namespace bustub {
 
+template<class ValueType>
+class DefaultComparator{
+  int operator()(const ValueType & a, const ValueType & b ){
+    return a - b;
+  }
+};
+
+
 #define BPLUSTREE_TYPE BPlusTree<KeyType, ValueType, KeyComparator>
 
 /**
@@ -74,8 +82,16 @@ class BPlusTree {
   // read data from file and remove one by one
   void RemoveFromFile(const std::string &file_name, Transaction *transaction = nullptr);
 
+
  private:
+  // search
+  void Search(BPlusTreePage *page, const KeyType &key, std::vector<ValueType> *result);
+
   void UpdateRootPageId(int insert_record = 0);
+
+  auto ToInternalPage(BPlusTreePage *page) -> InternalPage *;
+
+  auto ToLeafPage(BPlusTreePage *page_node) -> LeafPage *;
 
   /* Debug Routines for FREE!! */
   void ToGraph(BPlusTreePage *page, BufferPoolManager *bpm, std::ofstream &out) const;

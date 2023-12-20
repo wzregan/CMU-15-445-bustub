@@ -19,6 +19,22 @@
 #include "test_util.h"  // NOLINT
 
 namespace bustub {
+TEST(BPlusTreeTests, ENABLE_InsertPrepare) {
+  auto key_schema = ParseCreateStatement("a bigint");
+  GenericComparator<8> comparator(key_schema.get());
+  auto *disk_manager = new DiskManager("test.db");
+  BufferPoolManager *bpm = new BufferPoolManagerInstance(50, disk_manager);
+  
+  page_id_t page_id;
+  Page* header_page = bpm->NewPage(&page_id);
+  auto header_node = reinterpret_cast<BPlusTreeInternalPage<GenericKey<8>, RID,GenericComparator<8>>*>(header_page);
+  header_node->Init(page_id, -1, 50);
+  GenericKey<8> index_key;
+  index_key.SetFromInteger(32);
+  RID value;
+  int size = header_node->GetSize();
+  EXPECT_EQ(size, 0);
+}
 
 TEST(BPlusTreeTests, DISABLED_InsertTest1) {
   // create KeyComparator and index schema
