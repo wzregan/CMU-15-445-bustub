@@ -20,6 +20,7 @@ namespace bustub {
  * Database use the first page (page_id = 0) as header page to store metadata, in
  * our case, we will contain information about table/index name (length less than
  * 32 bytes) and their corresponding root_id
+ * 使用第一个页面作为header_page去存储元数据。 保存所有表的索引名字和root_id
  *
  * Format (size in byte):
  *  -----------------------------------------------------------------

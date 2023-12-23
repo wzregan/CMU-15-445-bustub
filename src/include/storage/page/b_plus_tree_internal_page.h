@@ -40,7 +40,11 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   auto KeyAt(int index) const -> KeyType;
   void SetKeyAt(int index, const KeyType &key);
   auto ValueAt(int index) const -> ValueType;
-  auto FindNextNode(const KeyType & key, ValueType *value, KeyComparator cmp) const -> bool;
+  // helper
+  auto Insert(const KeyType & key, const ValueType & value,  KeyComparator cmp) -> bool;
+  auto Delete(const KeyType & key, ValueType *value,  KeyComparator cmp) -> bool;
+  auto BinarySearch(const KeyType & key, int *idx, KeyComparator cmp) const -> bool;
+  auto SearchValueByKey(const KeyType & key, ValueType *value, KeyComparator cmp) const -> bool;
  private:
   // Flexible array member for page data.
   MappingType children_[1];

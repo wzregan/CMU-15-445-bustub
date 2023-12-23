@@ -14,7 +14,7 @@
 #include "common/exception.h"
 #include "common/rid.h"
 #include "storage/page/b_plus_tree_leaf_page.h"
-
+#include "storage/index/b_plus_tree.h"
 namespace bustub {
 
 /*****************************************************************************
@@ -31,6 +31,7 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::Init(page_id_t page_id, page_id_t parent_id, in
   SetMaxSize(max_size);
   SetParentPageId(parent_id);
   SetPageId(page_id);
+  SetPageType(IndexPageType::LEAF_PAGE);
 }
 
 /**
@@ -54,33 +55,98 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::KeyAt(int index) const -> KeyType {
   return array_[index].first;
 }
 
+
+// helper
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_LEAF_PAGE_TYPE::Get(const KeyType & key, KeyComparator & cmp, std::vector<ValueType> *result) -> void{
-  int R = GetSize() - 1;
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::BinarySearch(const KeyType & key, int *idx, KeyComparator cmp) const -> bool{
+  // 根据给定的key，找到下一个节点
   int L = 0;
-  int mid = (L + R) / 2;
-  while ( L <= R) {
-    int cmp_ret = cmp(array_[mid].first, key);
+  int R = GetSize();
+  int mid;
+  int cmp_ret;
+  while ( L < R) {
+    mid = (L + R) / 2;
+    cmp_ret = cmp(KeyAt(mid), key);
     if ( cmp_ret > 0 ) {
-      R = mid - 1;
+      R = mid;
     }else if( cmp_ret < 0 ) {
       L = mid + 1;
-    }else if( mid > 0 && cmp(array_[mid - 1].first, key)==0){
-      R = mid - 1;
     }else{
-      break;
+      if (idx!=nullptr) {
+        *idx = mid;
+      }
+      return true;
     }
-    mid = (L + R) / 2;
   }
-  // 最终的位置就是R
-  while (R<GetSize() && cmp(array_[R].first, key)==0) {
-    result->push_back(array_[R++].second);
+  if (idx!=nullptr) {
+    *idx = L;
   }
-  return;
-
-
+  return false;
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::SetValue(int index, const ValueType & value) -> void{
+  array_[index].second = value;
+}
+// helper，插入帮助函数，一定可以插入成功，但是插入之后如果满了，则返回true
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::InsertRecard(const KeyType & key, const ValueType & value, KeyComparator & cmp) -> bool {
+  int idx;
+  bool findable = BinarySearch(key, &idx, cmp);
+  if (findable) {
+    // 如果找到了，则更新值
+    SetValue(idx, value);
+    return false;
+  }else{
+    // 如果没有找到，则插入
+    // 1. 向后拷贝
+    int current_size = GetSize();
+
+    for (int i = current_size; i > idx ; i--) {
+      array_[i] = array_[i - 1];
+    }
+    array_[idx].first = key;
+    array_[idx].second = value;
+    IncreaseSize(1);
+    // 判断是否满了
+    return GetMaxSize() < current_size + 1;
+  }
+}
+
+// helper，删除帮助函数，返回true则说明删除成功
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::DeleteRecard(const KeyType & key, ValueType * value, KeyComparator & cmp) -> bool {
+  // 删除记录
+  int current_size = GetSize();
+  if (current_size == 0) {
+    return false;
+  }
+  int idx;
+  bool isfound = BinarySearch(key, &idx, cmp);
+  if (!isfound) {
+    return false;
+  }
+  if (value!=nullptr) {
+    *value = array_[idx].second;
+  }
+  for (int i = idx; i < current_size - 1; i++) {
+    array_[i] = array_[i+1];
+  }
+  IncreaseSize(-1);
+  return true;
+}
+
+
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::Get(const KeyType & key, KeyComparator & cmp, std::vector<ValueType> *result) -> void{
+  int idx;
+  bool findable = BinarySearch(key, &idx, cmp);
+  if (findable) {
+    result->emplace_back(array_[idx].second);
+  }
+}
+template class BPlusTreeLeafPage<int, int, DefaultComparator<int>>;
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;
 template class BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>>;
 template class BPlusTreeLeafPage<GenericKey<16>, RID, GenericComparator<16>>;

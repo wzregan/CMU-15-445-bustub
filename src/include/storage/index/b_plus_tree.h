@@ -23,6 +23,7 @@ namespace bustub {
 
 template<class ValueType>
 class DefaultComparator{
+public:
   int operator()(const ValueType & a, const ValueType & b ){
     return a - b;
   }
@@ -64,6 +65,16 @@ class BPlusTree {
 
   // return the page id of the root node
   auto GetRootPageId() -> page_id_t;
+  
+  auto SplitNode(InternalPage * node) -> void {
+    // 1. 判断是否已满，如果满则结束递归
+
+    // 2. 如果满了，则开始分裂操作
+
+    // 3. 
+
+  }
+
 
   // index iterator
   auto Begin() -> INDEXITERATOR_TYPE;
@@ -89,9 +100,14 @@ class BPlusTree {
 
   void UpdateRootPageId(int insert_record = 0);
 
-  auto ToInternalPage(BPlusTreePage *page) -> InternalPage *;
+  template <typename T>
+  auto ToInternalPage(T *page_data) -> InternalPage *;
 
-  auto ToLeafPage(BPlusTreePage *page_node) -> LeafPage *;
+  template <typename T>
+  auto ToGeneralPage(T *page_data) -> BPlusTreePage *;
+
+  template <typename T>
+  auto ToLeafPage(T *page_data) -> LeafPage *;
 
   /* Debug Routines for FREE!! */
   void ToGraph(BPlusTreePage *page, BufferPoolManager *bpm, std::ofstream &out) const;

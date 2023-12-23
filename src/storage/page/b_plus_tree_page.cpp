@@ -17,8 +17,12 @@ namespace bustub {
  * Helper methods to get/set page type
  * Page type enum class is defined in b_plus_tree_page.h
  */
+// 判断是否为叶子页面
 auto BPlusTreePage::IsLeafPage() const -> bool { return page_type_==IndexPageType::LEAF_PAGE; }
-auto BPlusTreePage::IsRootPage() const -> bool { return page_type_==IndexPageType::INVALID_INDEX_PAGE; }
+// 判断是否为根页面
+auto BPlusTreePage::IsRootPage() const -> bool { return parent_page_id_==HEADER_PAGE_ID; }
+
+// 设置页面类型
 void BPlusTreePage::SetPageType(IndexPageType page_type) { page_type_ = page_type; }
 
 /*
@@ -27,7 +31,7 @@ void BPlusTreePage::SetPageType(IndexPageType page_type) { page_type_ = page_typ
  */
 auto BPlusTreePage::GetSize() const -> int { return size_; }
 void BPlusTreePage::SetSize(int size) { size_=size; }
-void BPlusTreePage::IncreaseSize(int amount) { size_++; }
+void BPlusTreePage::IncreaseSize(int amount) { size_+=amount; }
 
 /*
  * Helper methods to get/set max size (capacity) of the page
@@ -39,7 +43,13 @@ void BPlusTreePage::SetMaxSize(int size) { max_size_ = size; }
  * Helper method to get min page size
  * Generally, min page size == max page size / 2
  */
-auto BPlusTreePage::GetMinSize() const -> int { return max_size_ / 2; }
+auto BPlusTreePage::GetMinSize() const -> int { 
+    if (IsRootPage()) {
+        // 如果是根页面，则最少为1
+        return 1;
+    }
+    return max_size_ / 2; 
+}
 
 /*
  * Helper methods to get/set parent page id

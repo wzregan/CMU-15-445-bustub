@@ -20,6 +20,7 @@ BPLUSTREE_TYPE::BPlusTree(std::string name, BufferPoolManager *buffer_pool_manag
       comparator_(comparator),
       leaf_max_size_(leaf_max_size),
       internal_max_size_(internal_max_size) {
+        // 先判断是否有根页面
 
 
       }
@@ -28,7 +29,7 @@ BPLUSTREE_TYPE::BPlusTree(std::string name, BufferPoolManager *buffer_pool_manag
  * Helper function to decide whether current b+tree is empty
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return true; }
+auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return root_page_id_ == INVALID_PAGE_ID; }
 /*****************************************************************************
  * SEARCH
  *****************************************************************************/
@@ -41,15 +42,10 @@ INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction) -> bool {
   page_id_t root_page_id = GetRootPageId();
   Page * root_page = buffer_pool_manager_->FetchPage(root_page_id);
-  root_page->GetData();
-  BPlusTreePage * root_page_bp_base_page = reinterpret_cast<BPlusTreePage*>(root_page);
-  // 判断是否为内部结点，如果是内部节点，那么就说明只有这一个节点
-  if (root_page_bp_base_page->IsLeafPage()) {
-    
-  } else {
-    // 如果不是叶子结点，则需要进行搜索
+  BPlusTreePage * node = ToGeneralPage(root_page->GetData());
+  node->GetPageId();
 
-  }
+  // 判断是否为内部结点，如果是内部节点，那么就说明只有这一个节点
 
   return false;
 }
@@ -60,8 +56,10 @@ void BPLUSTREE_TYPE::Search(BPlusTreePage *page_node, const KeyType &key, std::v
     // page_node不是叶子节点，所以page_node可以转化为中间结点
     auto page_internal_node = ToInternalPage(page_node);
     // 通过中间节点找到合适的叶子结点，然后循环再次判断
-    frame_id_t frame_id;
-    page_internal_node->FindNextNode(key, &frame_id, comparator_);
+    int idx;
+    page_internal_node->BinarySearch(key, &idx, comparator_);
+    frame_id_t frame_id = page_internal_node->ValueAt(idx);
+
     Page * page = buffer_pool_manager_->FetchPage(frame_id);
     page_internal_node = reinterpret_cast<InternalPage * >(page->GetData());
   }
@@ -80,13 +78,51 @@ void BPLUSTREE_TYPE::Search(BPlusTreePage *page_node, const KeyType &key, std::v
  * Insert constant key & value pair into b+ tree
  * if current tree is empty, start new tree, update root page id and insert
  * entry, otherwise insert into leaf page.
- * @return: since we only support unique key, if user try to insert duplicate
- * keys return false, otherwise return true.
+ * @return: since we only support unique key,                                          
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *transaction) -> bool {
-  return false;
+  // 如果当前B+树为空，则先初始化一下
+  if (IsEmpty()){
+    // 如果root页还没设置，则初始化一下
+    Page * page = buffer_pool_manager_->NewPage(&root_page_id_);
+    // 将该页面设置为根页面
+    UpdateRootPageId(root_page_id_);
+    // 初始化为数据结点
+    LeafPage* root_node = ToLeafPage(page->GetData());
+    root_node->Init(root_page_id_, HEADER_PAGE_ID, leaf_max_size_);
+  }
+  // 1. 找到根节点
+  page_id_t root_page_id = GetRootPageId();
+  Page * page = buffer_pool_manager_->FetchPage(root_page_id);
+  // 使用父类节点类接收这个结点
+  BPlusTreePage* node = ToGeneralPage(page->GetData());
+  
+  while (!node->IsLeafPage()) {
+      InternalPage * node_interal = ToInternalPage(node);
+      // 2. 找到下一层开始的位置
+      int idx;
+      node_interal->BinarySearch(key, &idx, comparator_);
+      // 3. 先取出page id
+      page_id_t next_page_id = node_interal->ValueAt(idx);
+      // 4. 然后取出page，并将其转化为BPlusPage
+      Page * page_temp = buffer_pool_manager_->FetchPage(next_page_id);
+      // 然后继续寻找
+      node = ToGeneralPage(page_temp->GetData());
+
+  }
+  // 跳出for循环之后，肯定就是叶子节点了
+  LeafPage * leaf_node = ToLeafPage(node);
+  // 然后插入即可
+  bool is_full = leaf_node->InsertRecard(key, value, comparator_);
+  if (is_full) {
+    // 如果满了，则进行分裂操作
+    std::cout<<"split...\n";
+  }
+  return true;
 }
+
+
 
 /*****************************************************************************
  * REMOVE
@@ -132,7 +168,7 @@ auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE { return INDEXITERATOR_TYPE(); 
  * @return Page id of the root of this tree
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::GetRootPageId() -> page_id_t { return 0; }
+auto BPLUSTREE_TYPE::GetRootPageId() -> page_id_t { return root_page_id_; }
 
 /*****************************************************************************
  * UTILITIES AND DEBUG
@@ -347,10 +383,17 @@ void BPLUSTREE_TYPE::ToString(BPlusTreePage *page, BufferPoolManager *bpm) const
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::ToInternalPage(BPlusTreePage *page_node) -> BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator> * { return reinterpret_cast<InternalPage*>(page_node); }
+template <typename T>
+auto BPLUSTREE_TYPE::ToInternalPage(T *page_data) -> InternalPage * { return reinterpret_cast<InternalPage *>(page_data); }
 
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::ToLeafPage(BPlusTreePage *page_node) -> BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> * { return reinterpret_cast<LeafPage*>(page_node); }
+template <typename T>
+auto BPLUSTREE_TYPE::ToGeneralPage(T *page_data) -> BPlusTreePage * { return reinterpret_cast<BPlusTreePage *>(page_data); }
+
+
+INDEX_TEMPLATE_ARGUMENTS
+template <typename T>
+auto BPLUSTREE_TYPE::ToLeafPage(T *page_data) -> LeafPage * { return reinterpret_cast<LeafPage*>(page_data); }
 
 template class BPlusTree<GenericKey<4>, RID, GenericComparator<4>>;
 template class BPlusTree<GenericKey<8>, RID, GenericComparator<8>>;
