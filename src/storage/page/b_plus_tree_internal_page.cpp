@@ -39,12 +39,12 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Init(page_id_t page_id, page_id_t parent_id
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::KeyAt(int index) const -> KeyType {
   // replace with your own code
-  return children_[index].first;
+  return array_[index].first;
 }
 
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetKeyAt(int index, const KeyType &key) {
-  children_[index].first = key;
+  array_[index].first = key;
 }
 
 INDEX_TEMPLATE_ARGUMENTS
@@ -90,7 +90,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::SearchValueByKey(const KeyType & key, Value
  * offset)
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const -> ValueType { return children_[index].second; }
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const -> ValueType { return array_[index].second; }
 
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Delete(const KeyType & key, ValueType *value,  KeyComparator cmp) -> bool {
@@ -104,10 +104,10 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Delete(const KeyType & key, ValueType *valu
     return false;
   }
   if (value!=nullptr) {
-    *value = children_[idx].second;
+    *value = array_[idx].second;
   }
   for (int i = idx; i < current_size - 1; i++) {
-    children_[i] = children_[i+1];
+    array_[i] = array_[i+1];
   }
 
   IncreaseSize(-1);
@@ -122,18 +122,21 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(const KeyType & key, const ValueType
 
   bool exist = BinarySearch(key, &idx, cmp);
   if (exist) {
-    return false;
+    this->array_[idx].second = value;
+    return GetSize() > GetMaxSize();
   }
+  // 
   // 向后拷贝
   for (int i = current_size; i > idx ; i--) {
-    children_[i] = children_[i - 1];
+    array_[i] = array_[i - 1];
   }
   // 给孩子赋值
-  children_[idx].first  = key;
-  children_[idx].second = value;
+  array_[idx].first  = key;
+  array_[idx].second = value;
   // 添加大小
   IncreaseSize(1);
-  return true;
+
+  return GetSize() > GetMaxSize();
 }
 
 // valuetype for internalNode should be page id_t

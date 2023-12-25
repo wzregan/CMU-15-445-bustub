@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "storage/page/b_plus_tree_page.h"
-
 namespace bustub {
 
 #define B_PLUS_TREE_LEAF_PAGE_TYPE BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>
@@ -39,8 +38,15 @@ namespace bustub {
  * | ParentPageId (4) | PageId (4) | NextPageId (4)
  *  -----------------------------------------------
  */
+
+INDEX_TEMPLATE_ARGUMENTS
+class BPlusTree;
+
 INDEX_TEMPLATE_ARGUMENTS
 class BPlusTreeLeafPage : public BPlusTreePage {
+  friend class BPlusTree<KeyType, ValueType, KeyComparator>;
+  friend class BPlusTree<KeyType, page_id_t, KeyComparator>;
+
  public:
   // After creating a new leaf page from buffer pool, must call initialize
   // method to set default values
@@ -60,7 +66,8 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   // helper，删除帮助函数，返回true则说明删除成功
   auto DeleteRecard(const KeyType & key, ValueType * value, KeyComparator & cmp) -> bool;
 
- private:
+
+ public:
   page_id_t next_page_id_;
   // Flexible array member for page data.
   MappingType array_[1];

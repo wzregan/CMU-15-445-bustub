@@ -13,7 +13,6 @@
 #include <queue>
 
 #include "storage/page/b_plus_tree_page.h"
-
 namespace bustub {
 
 #define B_PLUS_TREE_INTERNAL_PAGE_TYPE BPlusTreeInternalPage<KeyType, ValueType, KeyComparator>
@@ -33,7 +32,12 @@ namespace bustub {
  *  --------------------------------------------------------------------------
  */
 INDEX_TEMPLATE_ARGUMENTS
+class BPlusTree;
+
+INDEX_TEMPLATE_ARGUMENTS
 class BPlusTreeInternalPage : public BPlusTreePage {
+  friend class BPlusTree<KeyType, ValueType, KeyComparator>;
+  friend class BPlusTree<KeyType, page_id_t, KeyComparator>;
  public:
   // must call initialize method after "create" a new node
   void Init(page_id_t page_id, page_id_t parent_id = INVALID_PAGE_ID, int max_size = INTERNAL_PAGE_SIZE);
@@ -45,8 +49,8 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   auto Delete(const KeyType & key, ValueType *value,  KeyComparator cmp) -> bool;
   auto BinarySearch(const KeyType & key, int *idx, KeyComparator cmp) const -> bool;
   auto SearchValueByKey(const KeyType & key, ValueType *value, KeyComparator cmp) const -> bool;
- private:
+ public:
   // Flexible array member for page data.
-  MappingType children_[1];
+  MappingType array_[1];
 };
 }  // namespace bustub

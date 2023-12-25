@@ -16,7 +16,6 @@ std::unordered_map<char, std::unique_ptr<TrieNode>> children_;
 // 注意，这里统一使用了unique_ptr智能指针对数据进行管理，这样的好处就是TrieNode只能当一颗Trie的节点，不会出现连接到其他Trie上的情况
 ```
 
-
 * [X] `TrieNode(char key_char)`
 
 - 构造函数，对一个节点赋值key，并且标记为非终端节点
@@ -52,6 +51,7 @@ std::unordered_map<char, std::unique_ptr<TrieNode>> children_;
 * [X] void RemoveChildNode(char key_char)
 
 - 直接在chidren_map中删除就行了，不需要考虑内存管理，因为我们使用了unique_ptr对象，自动帮我们销毁对象
+
 - [X] void SetEndNode(bool is_end)
 
 * [X] `TrieNode(char key_char)`
@@ -289,10 +289,7 @@ Evict实现思路：
 
 ##### 无锁的解决方案1：
 
-
-
 ##### 无锁的解决方案2：
-
 
 #### 难点2：实现B+树
 
@@ -316,12 +313,10 @@ B+数与B树区别
 
 下图是插入关键字：15后的结果：
 
-
 ![img](https://segmentfault.com/img/bVcY7nz)
 
-* 若被插入关键字所在的结点，其含有关键字数目等于阶数M，则需要将该结点分裂为两个结点。
+* 若被插入关键字所在的结点，其含有关键字数目大于阶数M，则需要将该结点分裂为两个结点。
 
 上图中插入关键字：9后结点的关键字数量为：4，超过了B+树阶数M，因此需要进行结点分裂操作，分裂后的结果为：
-
 
 ![img](https://segmentfault.com/img/bVcY7nA)

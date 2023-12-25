@@ -60,7 +60,7 @@ void BPlusTreePage::SetParentPageId(page_id_t parent_page_id) { parent_page_id_ 
 /*
  * Helper methods to get/set self page id
  */
-auto BPlusTreePage::GetPageId() const -> page_id_t { return 0; }
+auto BPlusTreePage::GetPageId() const -> page_id_t { return page_id_; }
 void BPlusTreePage::SetPageId(page_id_t page_id) { page_id_ = page_id; }
 
 /*

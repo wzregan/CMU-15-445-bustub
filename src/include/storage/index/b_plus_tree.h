@@ -66,8 +66,11 @@ class BPlusTree {
   // return the page id of the root node
   auto GetRootPageId() -> page_id_t;
   
-  auto SplitNode(InternalPage * node) -> void {
+  auto SplitNode(BPlusTreePage * node) -> void {
     // 1. 判断是否已满，如果满则结束递归
+    
+    //     父亲结点       4       2  |   4
+    // node中的数据 1,2,3,4  -> 1,2  | 3,4
 
     // 2. 如果满了，则开始分裂操作
 
@@ -93,10 +96,14 @@ class BPlusTree {
   // read data from file and remove one by one
   void RemoveFromFile(const std::string &file_name, Transaction *transaction = nullptr);
 
+  auto Search(const KeyType &key, std::vector<ValueType> *result) -> void;
 
  private:
   // search
-  void Search(BPlusTreePage *page, const KeyType &key, std::vector<ValueType> *result);
+  // split
+  template<class T>
+  auto SplitNode(T * origin, T * splited) -> void;
+
 
   void UpdateRootPageId(int insert_record = 0);
 

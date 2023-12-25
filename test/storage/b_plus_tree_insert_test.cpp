@@ -198,7 +198,10 @@ TEST(BPlusTreeTests, ENABLE_InsertPrepare3){
 
   auto *disk_manager = new DiskManager("test.db");
 
-  BufferPoolManager *bpm = new BufferPoolManagerInstance(50, disk_manager);
+  BufferPoolManager *bpm = new BufferPoolManagerInstance(100, disk_manager);
+  page_id_t page_id;
+  auto header_page = bpm->NewPage(&page_id);
+  (void)header_page;
   // create b+ tree
   BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", bpm, comparator, 2, 3);
   GenericKey<8> index_key;
@@ -208,14 +211,26 @@ TEST(BPlusTreeTests, ENABLE_InsertPrepare3){
 
 
     // create and fetch header_page
-  std::vector<int64_t> keys = {1, 2, 3, 4, 5};
+  std::vector<int64_t> keys;
+  for (int64_t i = 1; i < 20; i++)
+    keys.push_back(i);
   for (auto key : keys) {
     int64_t value = key & 0xFFFFFFFF;
     rid.Set(static_cast<int32_t>(key >> 32), value);
     index_key.SetFromInteger(key);
     tree.Insert(index_key, rid, transaction);
   }
+  std::vector<RID> vec;
+  for (auto key : keys) {
+    index_key.SetFromInteger(key);
+    tree.Search(index_key, &vec);
+    std::cout<<vec.size()<<"\n";
+  }
+  for (auto key : vec) {
+    std::cout << key.ToString() << "\n";
+  }
 
+  // tree.Print(bpm);
   delete transaction;
   delete disk_manager;
   delete bpm;
