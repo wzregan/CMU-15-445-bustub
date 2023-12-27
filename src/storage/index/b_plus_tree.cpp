@@ -40,14 +40,11 @@ auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return root_page_id_ == INVALID_P
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction) -> bool {
-  page_id_t root_page_id = GetRootPageId();
-  Page * root_page = buffer_pool_manager_->FetchPage(root_page_id);
-  BPlusTreePage * node = ToGeneralPage(root_page->GetData());
-  node->GetPageId();
-
+  int old_result_size = result->size();
+  Search(key, result);
   // 判断是否为内部结点，如果是内部节点，那么就说明只有这一个节点
 
-  return false;
+  return result->size() - old_result_size;
 }
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::Search(const KeyType &key, std::vector<ValueType> *result){
@@ -62,15 +59,16 @@ void BPLUSTREE_TYPE::Search(const KeyType &key, std::vector<ValueType> *result){
     page_internal_node->BinarySearch(key, &idx, comparator_);
     
     page_id_t page_id = page_internal_node->ValueAt(idx);
-
-    Page * page = buffer_pool_manager_->FetchPage(page_id);
-    node = reinterpret_cast<InternalPage * >(page->GetData());
+    UnpinPageNode(page_internal_node,false);
+    node = FetchPageNode<InternalPage>(page_id);
   }
   // 如果是叶子结点，那我们就可以搜索值了
   if (node->IsLeafPage()) {
     LeafPage* page_leaf_node = ToLeafPage(node);
     page_leaf_node->Get(key, comparator_,result);
   }
+  UnpinPageNode(node,false);
+
 }
 
 /*****************************************************************************
@@ -86,60 +84,106 @@ INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *transaction) -> bool {
   // 如果当前B+树为空，则先初始化一下
   if (IsEmpty()){
-    // 如果root页还没设置，则初始化一下
-    Page * page = buffer_pool_manager_->NewPage(&root_page_id_);
-    // 将该页面设置为根页面
-    UpdateRootPageId(root_page_id_);
     // 初始化为数据结点
-    LeafPage* root_node = ToLeafPage(page->GetData());
-    root_node->Init(root_page_id_, HEADER_PAGE_ID, leaf_max_size_);
+    LeafPage* root_node = NewPageNode<LeafPage>(HEADER_PAGE_ID, leaf_max_size_);
+    root_page_id_ = root_node->GetPageId();
+    UpdateRootPageId(root_page_id_);
+    UnpinPageNode(root_node, true);
   }
   // 1. 找到根节点
-  page_id_t root_page_id = GetRootPageId();
-  Page * page = buffer_pool_manager_->FetchPage(root_page_id);
-  // 使用父类节点类接收这个结点
-  BPlusTreePage* node = ToGeneralPage(page->GetData());
+  BPlusTreePage* node = FetchPageNode<BPlusTreePage>(root_page_id_);
   
+  int idx;
   while (!node->IsLeafPage()) {
       InternalPage * node_interal = ToInternalPage(node);
       // 2. 找到下一层开始的位置
-      int idx;
       node_interal->BinarySearch(key, &idx, comparator_);
       // 如果是最后一个idx，则需要修改
       if (idx == node_interal->GetSize() && comparator_(key, node_interal->KeyAt(idx-1)) > 0) {
         node_interal->SetKeyAt(idx-1, key);
         idx = node_interal->GetSize() - 1;
+        UnpinPageNode(node_interal, true);
+      }else {
+        UnpinPageNode(node_interal, false);
       }
+
       // 3. 先取出page id
       page_id_t next_page_id = node_interal->ValueAt(idx);
-      // 4. 然后取出page，并将其转化为BPlusPage
-      Page * page_temp = buffer_pool_manager_->FetchPage(next_page_id);
       // 然后继续寻找
-      node = ToGeneralPage(page_temp->GetData());
+      node = FetchPageNode<BPlusTreePage>(next_page_id);
   }
   // 跳出for循环之后，肯定就是叶子节点了
   LeafPage * leaf_node = ToLeafPage(node);
   // 然后插入即可
   bool is_full = leaf_node->InsertRecard(key, value, comparator_);
+
   if (is_full) {
+    InternalPage * spliting_node = SplitPageNode(leaf_node);
+    while (spliting_node){
+      spliting_node = SplitPageNode(spliting_node);
+    }
+  } else {
+    UnpinPageNode(leaf_node, true);
+  }
+  // std::cout <<  << std::endl;
+  return true;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+template<class T>
+auto BPLUSTREE_TYPE::FetchPageNode(page_id_t page_id) -> T* {
+  Page * page = buffer_pool_manager_->FetchPage(page_id);
+  T * node = reinterpret_cast<T*>(page->GetData());
+  return node;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::SplitInternalPageNode(InternalPage * spliting_node) -> InternalPage * {
+  if (spliting_node->IsRootPage()) {
+    InternalPage * root_page_node = NewPageNode<InternalPage>(HEADER_PAGE_ID, internal_max_size_);
+    // 重新设置page_id
+    root_page_id_ = root_page_node->GetPageId();
+    // 然后重新设置当前leaf的父节点
+    UpdateRootPageId();
+    // 更新父亲节点
+    spliting_node->SetParentPageId(root_page_id_);
+
+    root_page_node->Insert(spliting_node->KeyAt(spliting_node->GetSize() - 1), spliting_node->GetPageId(), comparator_);
+    UnpinPageNode(root_page_node, true);
+  }
+  // 建立分割节点
+  InternalPage* temp_page = NewPageNode<InternalPage>(spliting_node->GetParentPageId(), internal_max_size_);
+  // 在对中间节点进行分裂
+  SplitNode(spliting_node, temp_page);
+  // 取出其父亲节点
+  page_id_t spliting_parent_page_id = spliting_node->GetParentPageId();
+  Page * spliting_parent_page = buffer_pool_manager_->FetchPage(spliting_parent_page_id);
+  InternalPage* spliting_parent_page_node = ToInternalPage(spliting_parent_page->GetData());
+  // 然后把新节点插入到父节点中
+  bool is_full = spliting_parent_page_node->Insert(temp_page->KeyAt(temp_page->GetSize() - 1), temp_page->GetPageId(), comparator_);
+  if (is_full) {
+    return spliting_parent_page_node;
+  }
+  return nullptr;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::SplitLeafPageNode(LeafPage *leaf_node) -> InternalPage * {
     // 如果本身就是根结点，需要插入一个中间节点
     if (leaf_node->IsRootPage()){
-      // 创建一个一个新的页面
-      Page * root_page = buffer_pool_manager_->NewPage(&root_page_id_);
-      // 更新root的id
-      UpdateRootPageId();
-      // 转换成root节点
-      InternalPage * root_page_node = ToInternalPage(root_page->GetData());
-      // 初始化root节点
-      root_page_node->Init(root_page_id_, HEADER_PAGE_ID, internal_max_size_);
+      InternalPage * root_page_node = NewPageNode<InternalPage>(HEADER_PAGE_ID, internal_max_size_);
+      // 重新设置page_id
+      root_page_id_ = root_page_node->GetPageId();
       // 然后重新设置当前leaf的父节点
+      UpdateRootPageId();
+      // 设置父亲节点
       leaf_node->SetParentPageId(root_page_id_);
+      // 把分裂节点插入到新的根节点
+      root_page_node->Insert(leaf_node->KeyAt(leaf_node->GetSize() - 1), leaf_node->GetPageId(), comparator_);
+      UnpinPageNode(root_page_node, true);
     }
     // 1. 新建一个分裂节点的页面
-    page_id_t splited_page_id;
-    page = buffer_pool_manager_->NewPage(&splited_page_id);
-    LeafPage* split_page_node = ToLeafPage(page->GetData());
-    split_page_node->Init(splited_page_id, leaf_node->GetParentPageId(), leaf_max_size_);
+    LeafPage* split_page_node = NewPageNode<LeafPage>(leaf_node->GetParentPageId(), leaf_max_size_);
     // 开始分裂
     SplitNode(leaf_node, split_page_node);
     // 然后取出其父亲节点
@@ -147,45 +191,94 @@ auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transact
     // 转化为内部结点
     InternalPage * parent_page_node = ToInternalPage(parent_page->GetData());
     // 然后把分裂的结点插入到内部结点中
-    parent_page_node->Insert(leaf_node->KeyAt(leaf_node->GetSize()- 1), leaf_node->GetPageId(), comparator_);
-    is_full = parent_page_node->Insert(split_page_node->KeyAt(split_page_node->GetSize() - 1), splited_page_id, comparator_);
-    InternalPage * spliting_node = parent_page_node;
-    while (is_full){
-      // 建立分割节点
-      page = buffer_pool_manager_->NewPage(&splited_page_id);
-
-      InternalPage* temp_page = ToInternalPage(page->GetData());
-      temp_page->Init(splited_page_id, spliting_node->GetParentPageId(), internal_max_size_);
-      // 在对中间节点进行分裂
-      SplitNode(spliting_node, temp_page);
-      // 取出其父亲节点
-      page_id_t spliting_parent_page_id = spliting_node->GetParentPageId();
-      Page * spliting_parent_page;
-      InternalPage * spliting_parent_page_node;
-      if (spliting_parent_page_id == HEADER_PAGE_ID) {
-        // 创建一个根结点
-        spliting_parent_page = buffer_pool_manager_->NewPage(&root_page_id_);
-        // 更新root的id
-        UpdateRootPageId();
-        // 转换成root节点
-        spliting_parent_page_node = ToInternalPage(spliting_parent_page->GetData());
-        // 初始化root节点
-        spliting_parent_page_node->Init(root_page_id_, HEADER_PAGE_ID, internal_max_size_);
-        // 然后重新设置当前leaf的父节点
-        spliting_node->SetParentPageId(root_page_id_);
-        temp_page->SetParentPageId(root_page_id_);
-      }else{
-        spliting_parent_page = buffer_pool_manager_->FetchPage(spliting_parent_page_id);
-        // 转化为内部结点
-        spliting_parent_page_node = ToInternalPage(spliting_parent_page->GetData());
-      }
-      is_full = spliting_parent_page_node->Insert(temp_page->KeyAt(temp_page->GetMinSize() - 1), temp_page->GetPageId(), comparator_);
-      spliting_parent_page_node->Insert(spliting_node->KeyAt(split_page_node->GetMinSize() - 1), spliting_node->GetPageId(), comparator_);
-      spliting_node = spliting_parent_page_node;
+    bool is_full = parent_page_node->Insert(split_page_node->KeyAt(split_page_node->GetSize() - 1), split_page_node->GetPageId(), comparator_);
+    
+    UnpinPageNode(split_page_node, true);
+    UnpinPageNode(leaf_node, true);
+    
+    if (is_full) {
+      return parent_page_node;
     }
-  }
-  return true;
+    UnpinPageNode(parent_page_node, true);
+    return nullptr;
 }
+
+INDEX_TEMPLATE_ARGUMENTS
+template<class PageNode>
+auto BPLUSTREE_TYPE::SplitPageNode(PageNode *node) -> InternalPage * {
+    // 如果本身就是根结点，需要插入一个中间节点
+    if (node->IsRootPage()){
+      InternalPage * root_page_node = NewPageNode<InternalPage>(HEADER_PAGE_ID, internal_max_size_);
+      // 重新设置page_id
+      root_page_id_ = root_page_node->GetPageId();
+      // 然后重新设置当前leaf的父节点
+      UpdateRootPageId();
+      // 设置父亲节点
+      node->SetParentPageId(root_page_id_);
+      // 把分裂节点插入到新的根节点
+      root_page_node->Insert(node->KeyAt(node->GetSize() - 1), node->GetPageId(), comparator_);
+      UnpinPageNode(root_page_node, true);
+    }
+    // 1. 新建一个分裂节点
+    PageNode* split_page_node = NewPageNode<PageNode>(node->GetParentPageId(), node->GetMaxSize());
+    // 开始分裂
+    SplitNode(node, split_page_node);
+    // 然后取出其父亲节点
+    InternalPage * parent_page_node = FetchPageNode<InternalPage>(split_page_node->GetParentPageId());
+    // 判断节点是否为叶子节点，如果是叶子节点，则我们需要更新next_page_id
+    if (node->IsLeafPage()) {
+        // 1. 将分裂出来的那个结点的next_page_id设置为split_page_node
+        // 2. 找到分裂节点的前一个结点修改next_pageid
+        //    必须是是排在最头部的叶子，那么就不做任何操作
+        LeafPage * leaf_node = ToLeafPage(node);
+        LeafPage * leaf_split_page_node = reinterpret_cast<LeafPage*>(split_page_node);
+        
+        
+        // 取出新分裂节点的pre
+        page_id_t leaf_node_pre_page_id = leaf_node->GetPrePageId();
+        // 设置新分裂节点的next
+        leaf_split_page_node->SetNextPageId(leaf_node->GetPageId());
+        // 设置新分裂节点的pre
+        leaf_split_page_node->SetPrePageId(leaf_node_pre_page_id);
+        // 更新当前旧分裂节点的pre
+        leaf_node->SetPrePageId(leaf_split_page_node->GetPageId());
+        // 更新旧的分裂点pre的next
+        if (leaf_node_pre_page_id!=INVALID_PAGE_ID)  {
+          LeafPage * leaf_node_pre_page = FetchPageNode<LeafPage>(leaf_node_pre_page_id);
+          leaf_node_pre_page->SetNextPageId(leaf_split_page_node->GetPageId());
+          UnpinPageNode(leaf_node_pre_page, true);
+        }
+    }
+    // 然后把分裂的结点插入到内部结点中
+    bool is_full = parent_page_node->Insert(split_page_node->KeyAt(split_page_node->GetSize() - 1), split_page_node->GetPageId(), comparator_);
+    
+    UnpinPageNode(split_page_node, true);
+    UnpinPageNode(node, true);
+    
+    if (is_full) {
+      return parent_page_node;
+    }
+    UnpinPageNode(parent_page_node, true);
+    return nullptr;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+template<class T>
+auto BPLUSTREE_TYPE::NewPageNode(page_id_t parent_page_id, int max_size) -> T* {
+  int page_id;
+  Page * page = buffer_pool_manager_->NewPage(&page_id);
+  T* temp_page = reinterpret_cast<T*>(page->GetData());
+  temp_page->Init(page_id, parent_page_id, max_size);
+  return temp_page;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+template<class T>
+auto BPLUSTREE_TYPE::UnpinPageNode(T * node, bool is_dirty) -> void {
+  page_id_t page_id = node->GetPageId();
+  buffer_pool_manager_->UnpinPage(page_id, is_dirty);
+}
+
 INDEX_TEMPLATE_ARGUMENTS
 template<class T>
 auto BPLUSTREE_TYPE::SplitNode(T * origin, T * new_page_node) -> void {
@@ -198,11 +291,23 @@ auto BPLUSTREE_TYPE::SplitNode(T * origin, T * new_page_node) -> void {
   for (int i = 0; i < origin->GetSize() - min_size; i++) {
     origin->array_[i] = origin->array_[min_size + i];
   }
+  // 如果是中间节点，还需要更新孩子结点的父亲！
+  if (!origin->IsLeafPage()) {
+    UpdateChildrenParent(reinterpret_cast<InternalPage*>(new_page_node));
+  }
   // 4. 更新节点数据量
   origin->IncreaseSize(-min_size);
+}
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::UpdateChildrenParent(InternalPage * parent) -> void {
+  for (int i = 0 ; i < parent->GetSize(); i++) {
+    page_id_t child_page_id = parent->ValueAt(i);
+    BPlusTreePage * child_page = FetchPageNode<BPlusTreePage>(child_page_id);
+    child_page->SetParentPageId(parent->GetPageId());
+    UnpinPageNode(child_page,true);
+  }
 
 }
-
 
 
 /*****************************************************************************
@@ -227,7 +332,22 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {}
  * @return : index iterator
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE { return INDEXITERATOR_TYPE(); }
+auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
+  // page_node不会为空
+  BPlusTreePage * node = FetchPageNode<BPlusTreePage>(root_page_id_);
+  while (!node->IsLeafPage()) {
+    // page_node不是叶子节点，所以page_node可以转化为中间结点
+    InternalPage *page_internal_node = ToInternalPage(node);
+    // 通过中间节点找到合适的叶子结点，然后循环再次判断
+    page_id_t page_id = page_internal_node->ValueAt(0);
+    UnpinPageNode(page_internal_node,false);
+    node = FetchPageNode<InternalPage>(page_id);
+  }
+  // 如果是叶子结点，那我们就可以搜索值了
+  page_id_t first_leafpage_id = node->GetPageId();
+  UnpinPageNode(node,false);
+  return INDEXITERATOR_TYPE(buffer_pool_manager_, first_leafpage_id, 0);
+}
 
 /*
  * Input parameter is low key, find the leaf page that contains the input key
@@ -235,7 +355,27 @@ auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE { return INDEXITERATOR_TYPE()
  * @return : index iterator
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE { return INDEXITERATOR_TYPE(); }
+auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE { 
+    // page_node不会为空
+  Page * root_page = buffer_pool_manager_->FetchPage(root_page_id_);
+  BPlusTreePage * node = ToGeneralPage(root_page);
+  while (!node->IsLeafPage()) {
+    // page_node不是叶子节点，所以page_node可以转化为中间结点
+    InternalPage *page_internal_node = ToInternalPage(node);
+    // 通过中间节点找到合适的叶子结点，然后循环再次判断
+    int idx;
+    page_internal_node->BinarySearch(key, &idx, comparator_);
+    page_id_t page_id = page_internal_node->ValueAt(idx);
+    UnpinPageNode(page_internal_node,false);
+    node = FetchPageNode<InternalPage>(page_id);
+  }
+  page_id_t leaf_page_id = node->GetPageId();
+  LeafPage *leaf_node = ToLeafPage(node);
+  int cursor = 0;
+  leaf_node->BinarySearch(key, &cursor, comparator_);
+  UnpinPageNode(node,false);
+  return INDEXITERATOR_TYPE(buffer_pool_manager_, leaf_page_id, cursor);
+}
 
 /*
  * Input parameter is void, construct an index iterator representing the end

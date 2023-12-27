@@ -31,7 +31,10 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::Init(page_id_t page_id, page_id_t parent_id, in
   SetMaxSize(max_size);
   SetParentPageId(parent_id);
   SetPageId(page_id);
+  SetSize(0);
   SetPageType(IndexPageType::LEAF_PAGE);
+  SetNextPageId(INVALID_PAGE_ID);
+  SetPrePageId(INVALID_PAGE_ID);
 }
 
 /**
@@ -44,6 +47,15 @@ INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::SetNextPageId(page_id_t next_page_id) {
   this->next_page_id_ = next_page_id;
 }
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::GetPrePageId() const -> page_id_t { return pre_page_id_; }
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::SetPrePageId(page_id_t pre_page_id) {
+  this->pre_page_id_ = pre_page_id;
+}
+
 
 /*
  * Helper method to find and return the key associated with input "index"(a.k.a

@@ -7,24 +7,49 @@
 
 namespace bustub {
 
-/*
- * NOTE: you can change the destructor/constructor method here
- * set your own input parameters
- */
 INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE::IndexIterator() = default;
+INDEXITERATOR_TYPE::IndexIterator() {
+
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+INDEXITERATOR_TYPE::IndexIterator(BufferPoolManager *bpm, page_id_t page_id, int start_index): bpm_(bpm), cursor_(start_index) {
+    Page* page_data = bpm->FetchPage(page_id);
+    page_ = reinterpret_cast<LeafPage*>(page_data->GetData());
+}
+
 
 INDEX_TEMPLATE_ARGUMENTS
 INDEXITERATOR_TYPE::~IndexIterator() = default;  // NOLINT
 
 INDEX_TEMPLATE_ARGUMENTS
-auto INDEXITERATOR_TYPE::IsEnd() -> bool { throw std::runtime_error("unimplemented"); }
+auto INDEXITERATOR_TYPE::IsEnd() -> bool { 
+    if (page_->GetNextPageId()==INVALID_PAGE_ID && cursor_ == this->page_->GetSize()) {
+        return true;
+    }
+    return false;
+}
 
 INDEX_TEMPLATE_ARGUMENTS
-auto INDEXITERATOR_TYPE::operator*() -> const MappingType & { throw std::runtime_error("unimplemented"); }
+auto INDEXITERATOR_TYPE::operator*() -> const MappingType & { 
+    return this->page_->array_[cursor_];
+}
 
 INDEX_TEMPLATE_ARGUMENTS
-auto INDEXITERATOR_TYPE::operator++() -> INDEXITERATOR_TYPE & { throw std::runtime_error("unimplemented"); }
+auto INDEXITERATOR_TYPE::operator++() -> INDEXITERATOR_TYPE & {
+    cursor_++;
+    if (IsEnd()) {
+        return *this;
+    }else if (cursor_ < page_->GetSize()) {
+        return *this;
+    }
+    page_id_t next_page_id = page_->GetNextPageId();
+    bpm_->UnpinPage(page_->GetPageId(), false);
+    Page* page_data = bpm_->FetchPage(next_page_id);
+    page_ = reinterpret_cast<LeafPage*>(page_data->GetData());
+    cursor_ = 0;
+    return *this;
+}
 
 template class IndexIterator<GenericKey<4>, RID, GenericComparator<4>>;
 

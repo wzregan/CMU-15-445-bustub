@@ -42,6 +42,9 @@ public:
  * (3) The structure should shrink and grow dynamically
  * (4) Implement index iterator for range scan
  */
+
+
+
 INDEX_TEMPLATE_ARGUMENTS
 class BPlusTree {
   using InternalPage = BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator>;
@@ -66,18 +69,6 @@ class BPlusTree {
   // return the page id of the root node
   auto GetRootPageId() -> page_id_t;
   
-  auto SplitNode(BPlusTreePage * node) -> void {
-    // 1. 判断是否已满，如果满则结束递归
-    
-    //     父亲结点       4       2  |   4
-    // node中的数据 1,2,3,4  -> 1,2  | 3,4
-
-    // 2. 如果满了，则开始分裂操作
-
-    // 3. 
-
-  }
-
 
   // index iterator
   auto Begin() -> INDEXITERATOR_TYPE;
@@ -103,17 +94,33 @@ class BPlusTree {
   // split
   template<class T>
   auto SplitNode(T * origin, T * splited) -> void;
+  auto SplitLeafPageNode(LeafPage *leaf) -> InternalPage *;
 
+  auto SplitInternalPageNode(InternalPage * spliting_node) -> InternalPage *;
+
+  auto UpdateChildrenParent(InternalPage * parent) -> void;
+
+  template<class T>
+  auto UnpinPageNode(T * node, bool is_dirty) -> void;
+
+  template<class T>
+  auto FetchPageNode(page_id_t page_id) -> T*;
+
+  template<class T>
+  auto NewPageNode(page_id_t parent_page_id, int max_size) -> T*;
+
+  template<class PageNode>
+  auto SplitPageNode(PageNode *leaf_node) -> InternalPage *;
 
   void UpdateRootPageId(int insert_record = 0);
 
-  template <typename T>
+  template <class T>
   auto ToInternalPage(T *page_data) -> InternalPage *;
 
-  template <typename T>
+  template <class T>
   auto ToGeneralPage(T *page_data) -> BPlusTreePage *;
 
-  template <typename T>
+  template <class T>
   auto ToLeafPage(T *page_data) -> LeafPage *;
 
   /* Debug Routines for FREE!! */

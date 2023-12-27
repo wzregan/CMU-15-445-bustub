@@ -193,44 +193,56 @@ TEST(BPlusTreeTests, DISABLED_InsertPrepare2) {
 
 
 TEST(BPlusTreeTests, ENABLE_InsertPrepare3){
+  srand(0);
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
 
   auto *disk_manager = new DiskManager("test.db");
 
-  BufferPoolManager *bpm = new BufferPoolManagerInstance(100, disk_manager);
+  BufferPoolManager *bpm = new BufferPoolManagerInstance(20, disk_manager);
   page_id_t page_id;
   auto header_page = bpm->NewPage(&page_id);
   (void)header_page;
   // create b+ tree
-  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", bpm, comparator, 2, 3);
+  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", bpm, comparator, 4, 5);
   GenericKey<8> index_key;
   RID rid;
   // create transaction
   auto *transaction = new Transaction(0);
 
-
     // create and fetch header_page
   std::vector<int64_t> keys;
-  for (int64_t i = 1; i < 20; i++)
-    keys.push_back(i);
+  for (int64_t i = 1; i < 100; i++)
+    keys.push_back(rand() % 50);
   for (auto key : keys) {
     int64_t value = key & 0xFFFFFFFF;
     rid.Set(static_cast<int32_t>(key >> 32), value);
     index_key.SetFromInteger(key);
     tree.Insert(index_key, rid, transaction);
-  }
+  } // 
+  tree.Draw(bpm, "btree.txt");
   std::vector<RID> vec;
   for (auto key : keys) {
     index_key.SetFromInteger(key);
+    vec.clear();
     tree.Search(index_key, &vec);
-    std::cout<<vec.size()<<"\n";
+    EXPECT_EQ(vec.size(), 1);
   }
-  for (auto key : vec) {
-    std::cout << key.ToString() << "\n";
+  
+  std::cout << "<iter>" << std::endl;
+  auto iter = tree.Begin();
+  while (!iter.IsEnd()) {
+    std::cout << (*iter).first.ToString() << std::endl;
+    ++iter;
+  }
+  std::cout << "<iter>" << std::endl;
+  index_key.SetFromInteger(15);
+  iter = tree.Begin(index_key);
+  while (!iter.IsEnd()) {
+    std::cout << (*iter).first.ToString() << std::endl;
+    ++iter;
   }
 
-  // tree.Print(bpm);
   delete transaction;
   delete disk_manager;
   delete bpm;
@@ -407,7 +419,7 @@ TEST(BPlusTreeTests, DISABLED_InsertTest3) {
     EXPECT_EQ(location.GetSlotNum(), current_key);
     current_key = current_key + 1;
   }
-
+  
   bpm->UnpinPage(HEADER_PAGE_ID, true);
   delete transaction;
   delete disk_manager;

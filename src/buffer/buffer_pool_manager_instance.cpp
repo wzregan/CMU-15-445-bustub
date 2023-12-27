@@ -112,10 +112,8 @@ auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
   if (this->replacer_->Size() > 0) {
     // 如果有可以驱逐的，则先驱逐掉原来的page，然后重新读取数据进page中
     this->replacer_->Evict(&frame_id);
-    printf("evict :%d\n", pages_[frame_id].page_id_);
 
     page_id_t old_page = this->pages_[frame_id].GetPageId();
-    printf("deleted %d\n", this->pages_[frame_id].pin_count_);
     latch_.unlock();
     this->DeletePgImp(old_page);
     return FetchPgImp(page_id);
