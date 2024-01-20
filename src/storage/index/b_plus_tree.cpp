@@ -411,19 +411,20 @@ auto BPLUSTREE_TYPE::FixInternalNode(PageNode *pn, const KeyType & deleted_key) 
   //   那么就在尝试向右兄弟借一个结点出来
   // 4.1 如果能借，先把借出来的结点从原结点删掉，并且要级联更新父亲的key
   bool success = BorrowBrother(pn, true) || BorrowBrother(pn, false);
+  // 如果借节点成功，直接将pn给删掉就行
   if (success) {
     if (pn->Delete(deleted_key, nullptr, comparator_)) {
+      // 删完之后更新父亲节点
       UpdateNode(pn);
     }
     UnpinPageNode(pn, true);
-    std::cout<<"??\n";
-
     return;
   }
-
+  // 如果不能借结点，那么就将pn与其兄弟融合
   InternalPage * need_fix_page = Merge(pn, deleted_key);
-
+  // 融合之后会可能会出现新的需要修复的结点，即上一层
   if (need_fix_page) {
+    // 继续修复....
     FixInternalNode(need_fix_page, deleted_key);
   }
 }
@@ -463,26 +464,31 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
   int ould_f = fetch_count, old_unpin = unpin_count;
   // 1. 找到key所在的叶子节点
   int idx;
-  // page_node不会为空
+  // page_node不会为空，定位key所在的那个叶子节点
   LeafPage *leaf_node = LocatePage(key, &idx);
 
+  // 如果所在的那个叶子节点为null，则说明没有这个key，直接返回
   if (leaf_node == nullptr) {
     return;
   }
+  // 定位到指定叶子节点之后，开始搜索，如果搜索不到，则直接返回
   bool findable = leaf_node->BinarySearch(key, &idx, comparator_);
   if (!findable) {
     UnpinPageNode(leaf_node, true);
-
     return;
   }
 
+  // 判断删除之后，是否需要修复
   if (leaf_node->GetSize() - 1 >= leaf_node->GetMinSize() || leaf_node->IsRootPage()) {
+    // 如果不需要，直接删除即可
     if (leaf_node->Delete(key, nullptr, comparator_)) {
+      //删除之后要向上更新节点
       UpdateNode(leaf_node);
     }
     UnpinPageNode(leaf_node, true);
     return;
   }
+  // 开始修复结点
   FixInternalNode(leaf_node, key);
   std::cout<<"out:"<<fetch_count - ould_f<<","<<unpin_count - old_unpin<<"\n";
 
@@ -512,21 +518,26 @@ void BPLUSTREE_TYPE::Merge(PageNode * merge_s, PageNode * merge_b) {
 INDEX_TEMPLATE_ARGUMENTS
 template<class PageNode>
 auto BPLUSTREE_TYPE::Merge(PageNode * mergein, const KeyType & deleted_key) -> InternalPage*{
+    // 先找到待融合节点的父亲节点
     page_id_t page_id = mergein->GetParentPageId();
-    
     InternalPage * mergein_parent = FetchPageNode<InternalPage>(page_id);
 
+    // 然后搜索该节点在父亲节点中的下标
     int idx;
     mergein_parent->BinarySearch(mergein->MaxKey(),&idx, comparator_);
 
+    // 然后判断父亲节点是不是根节点
     if (mergein_parent->IsRootPage() && mergein_parent->GetSize()==1) {
+      // 如果是根节点就好办了，就删除根节点，用这个叶子节点代替根节点
       buffer_pool_manager_->DeletePage(root_page_id_);
       mergein->SetParentPageId(HEADER_PAGE_ID);
       root_page_id_ = mergein->GetPageId();
       UpdateRootPageId();
 
+      //然后将key给删掉
       mergein->Delete(deleted_key, nullptr, comparator_);
       if (mergein->GetSize()==0) {
+        // 如果删除之后叶子节点已经没有数据了，直接将根节点设置为NULL
         UnpinPageNode(mergein, true);
         buffer_pool_manager_->DeletePage(mergein->GetPageId());
         root_page_id_ = INVALID_PAGE_ID;
@@ -537,9 +548,11 @@ auto BPLUSTREE_TYPE::Merge(PageNode * mergein, const KeyType & deleted_key) -> I
       }
       
     }else if(idx==0) {
-      // 向右融合
+      // 如果，merginin在是父亲节点中最小的，那么就只能向右融合了
       PageNode* right_node = FetchPageNode<PageNode>(mergein_parent->ValueAt(idx+1));
+      // 然后将两个节点融合即可
       Merge(mergein, right_node);
+      // 如果mergin是叶子节点，我们还需更新叶子节点中的指针
       if (mergein->IsLeafPage()) {
         LeafPage *next = ToLeafPage(mergein);
         if (next->GetPrePageId()!=INVALID_PAGE_ID) {
@@ -550,21 +563,23 @@ auto BPLUSTREE_TYPE::Merge(PageNode * mergein, const KeyType & deleted_key) -> I
         LeafPage *mergein_right_node = ToLeafPage(right_node);
         mergein_right_node->SetPrePageId(next->GetPrePageId());
       }
-
+      // 然后将key删除
       mergein_parent->Delete(mergein->MaxKey(), nullptr, comparator_);
-      
       UnpinPageNode(mergein, true);
+      // 删除融合的那张页，因为数据已经融合到另外一页去了
       buffer_pool_manager_->DeletePage(mergein->GetPageId());
 
+      // 然后将key从节点中删掉
       right_node->Delete(deleted_key, nullptr, comparator_);
       UpdateNode(right_node);
       UnpinPageNode(right_node, true);
     }else{
-      // 向左融合
+      // 向左融合，优先向左边融合
       PageNode* left_node = FetchPageNode<PageNode>(mergein_parent->ValueAt(idx-1));
       
       Merge(left_node, mergein);
 
+      // 更新叶结点链表
       if (mergein->IsLeafPage()) {
         LeafPage *next = ToLeafPage(left_node);
         if (next->GetPrePageId()!=INVALID_PAGE_ID) {
@@ -575,9 +590,9 @@ auto BPLUSTREE_TYPE::Merge(PageNode * mergein, const KeyType & deleted_key) -> I
 
         LeafPage *mergein_leaf = ToLeafPage(mergein);
         mergein_leaf->SetPrePageId(next->GetPrePageId());
-
-        
       }
+
+      // 逻辑同上...
       mergein_parent->Delete(left_node->MaxKey(), nullptr, comparator_);
       
       UnpinPageNode(left_node, true);
