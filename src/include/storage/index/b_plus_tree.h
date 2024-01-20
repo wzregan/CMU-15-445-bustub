@@ -68,7 +68,22 @@ class BPlusTree {
 
   // return the page id of the root node
   auto GetRootPageId() -> page_id_t;
-  
+
+  // 辅助函数，给定key，找出该key所在的leafpage和idx
+  auto LocatePage(const KeyType &key, int *idx) -> LeafPage*;
+
+  template<class PageNode>
+  auto Merge(PageNode * mergein, const KeyType & deleted_key) -> InternalPage*;
+
+  template<class PageNode>
+  auto Merge(PageNode * merge_b, PageNode * merge_s) -> void;
+  // 如果返回不为空，则说明返回的这个节点也需要修复
+  template<class PageNode>
+  auto FixInternalNode(PageNode *pn, const KeyType & deleted_key) -> void;
+
+  template<class PageNode>
+  auto BorrowBrother(PageNode * node, bool left) -> bool;
+
 
   // index iterator
   auto Begin() -> INDEXITERATOR_TYPE;
@@ -88,6 +103,12 @@ class BPlusTree {
   void RemoveFromFile(const std::string &file_name, Transaction *transaction = nullptr);
 
   auto Search(const KeyType &key, std::vector<ValueType> *result) -> void;
+  
+  template<class PageNode>
+  void UpdateNode(PageNode *node);
+  
+  int fetch_count{0};
+  int unpin_count{0};
 
  private:
   // search

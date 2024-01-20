@@ -116,6 +116,14 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Delete(const KeyType & key, ValueType *valu
 }
 
 INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::MaxKey() const -> KeyType {
+  if (GetSize()==0) {
+    return {};
+  }
+  return this->array_[GetSize() - 1].first;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(const KeyType & key, const ValueType & value,  KeyComparator cmp) -> bool {
   int current_size = GetSize();
 

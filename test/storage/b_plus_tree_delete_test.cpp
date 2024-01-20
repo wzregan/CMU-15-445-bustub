@@ -20,13 +20,70 @@
 
 namespace bustub {
 
-TEST(BPlusTreeTests, DISABLED_DeleteTest1) {
+TEST(BPlusTreeTests, ENABLE_DeletePre1){
+  srand(0);
+  auto key_schema = ParseCreateStatement("a bigint");
+  GenericComparator<8> comparator(key_schema.get());
+
+  auto *disk_manager = new DiskManager("test.db");
+
+  BufferPoolManager *bpm = new BufferPoolManagerInstance(7, disk_manager);
+  page_id_t page_id;
+  auto header_page = bpm->NewPage(&page_id);
+  (void)header_page;
+  // create b+ tree
+  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", bpm, comparator, 3, 4);
+  GenericKey<8> index_key;
+  RID rid;
+  // create transaction
+  auto *transaction = new Transaction(0);
+
+    // create and fetch header_page
+  std::vector<int64_t> keys;
+  for (int64_t i = 1; i < 200; i++)
+    keys.push_back(rand() % 20000);
+  for (auto key : keys) {
+    int64_t value = key & 0xFFFFFFFF;
+    rid.Set(static_cast<int32_t>(key >> 32), value);
+    index_key.SetFromInteger(key);
+    tree.Insert(index_key, rid, transaction);
+
+    std::cout<<tree.fetch_count<<","<<tree.unpin_count<<","<<key<<"\n";
+  } // 
+  tree.Draw(bpm, "btree.txt");
+  char file_name[128];
+  int k = 0;
+  tree.fetch_count = 0;
+  tree.unpin_count = 0;
+  for (auto key : keys) {
+    int64_t value = key & 0xFFFFFFFF;
+    rid.Set(static_cast<int32_t>(key >> 32), value);
+    index_key.SetFromInteger(key);
+    tree.Remove(index_key, nullptr);
+
+    sprintf(file_name, "/data/code/bustub2022/tmp/%d_delete_key_%ld.txt", k++, key);
+    std::cout<<tree.fetch_count<<","<<tree.unpin_count<<","<<key<<"\n";
+
+    tree.Draw(bpm, file_name);
+  }
+
+
+  delete transaction;
+  delete disk_manager;
+  delete bpm;
+  remove("test.db");
+  remove("test.log");
+
+}
+
+
+TEST(BPlusTreeTests, DISABLE_DeleteTest1) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
 
   auto *disk_manager = new DiskManager("test.db");
-  BufferPoolManager *bpm = new BufferPoolManagerInstance(50, disk_manager);
+  BufferPoolManager *bpm = new BufferPoolManagerInstance(20, disk_manager);
   // create b+ tree
   BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", bpm, comparator);
   GenericKey<8> index_key;
@@ -92,7 +149,7 @@ TEST(BPlusTreeTests, DISABLED_DeleteTest1) {
   remove("test.log");
 }
 
-TEST(BPlusTreeTests, DISABLED_DeleteTest2) {
+TEST(BPlusTreeTests, DISABLE_DeleteTest2) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());

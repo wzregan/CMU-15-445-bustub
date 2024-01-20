@@ -34,9 +34,13 @@ class IndexIterator {
 
   auto operator++() -> IndexIterator &;
 
-  auto operator==(const IndexIterator &itr) const -> bool { throw std::runtime_error("unimplemented"); }
+  auto operator==(const IndexIterator &itr) const -> bool {
+    return itr.page_->GetPageId() == this->page_->GetPageId() && itr.cursor_==this->cursor_;
+  }
 
-  auto operator!=(const IndexIterator &itr) const -> bool { throw std::runtime_error("unimplemented"); }
+  auto operator!=(const IndexIterator &itr) const -> bool {
+    return !(this->operator==(itr));
+  }
 
  private:
   // add your own private member variables here

@@ -56,6 +56,13 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::SetPrePageId(page_id_t pre_page_id) {
   this->pre_page_id_ = pre_page_id;
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::MaxKey() const -> KeyType {
+  if (GetSize()==0) {
+    return {};
+  }
+  return this->array_[GetSize() - 1].first;
+}
 
 /*
  * Helper method to find and return the key associated with input "index"(a.k.a
@@ -102,7 +109,7 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::SetValue(int index, const ValueType & value) ->
 }
 // helper，插入帮助函数，一定可以插入成功，但是插入之后如果满了，则返回true
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_LEAF_PAGE_TYPE::InsertRecard(const KeyType & key, const ValueType & value, KeyComparator & cmp) -> bool {
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType & key, const ValueType & value, KeyComparator & cmp) -> bool {
   int idx;
   bool findable = BinarySearch(key, &idx, cmp);
   if (findable) {
@@ -127,7 +134,7 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::InsertRecard(const KeyType & key, const ValueTy
 
 // helper，删除帮助函数，返回true则说明删除成功
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_LEAF_PAGE_TYPE::DeleteRecard(const KeyType & key, ValueType * value, KeyComparator & cmp) -> bool {
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::Delete(const KeyType & key, ValueType * value, KeyComparator & cmp) -> bool {
   // 删除记录
   int current_size = GetSize();
   if (current_size == 0) {

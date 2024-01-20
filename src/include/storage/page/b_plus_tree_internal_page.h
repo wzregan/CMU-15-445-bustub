@@ -49,6 +49,7 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   auto Delete(const KeyType & key, ValueType *value,  KeyComparator cmp) -> bool;
   auto BinarySearch(const KeyType & key, int *idx, KeyComparator cmp) const -> bool;
   auto SearchValueByKey(const KeyType & key, ValueType *value, KeyComparator cmp) const -> bool;
+  auto MaxKey() const -> KeyType;
  public:
   // Flexible array member for page data.
   MappingType array_[1];

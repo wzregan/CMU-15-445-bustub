@@ -60,15 +60,18 @@ class BPlusTreeLeafPage : public BPlusTreePage {
 
   auto KeyAt(int index) const -> KeyType;
 
+  auto MaxKey() const -> KeyType;
+
+
   auto SetValue(int index, const ValueType & value) -> void;
   auto Get(const KeyType & key, KeyComparator & cmp, std::vector<ValueType> *result) -> void;
   // helper，搜索函数  
   auto BinarySearch(const KeyType & key, int *idx, KeyComparator cmp) const -> bool;
   // helper，插入帮助函数，一定可以插入成功，但是插入之后如果满了，则返回true
-  auto InsertRecard(const KeyType & key, const ValueType & value, KeyComparator & cmp) -> bool;
+  auto Insert(const KeyType & key, const ValueType & value, KeyComparator & cmp) -> bool;
 
   // helper，删除帮助函数，返回true则说明删除成功
-  auto DeleteRecard(const KeyType & key, ValueType * value, KeyComparator & cmp) -> bool;
+  auto Delete(const KeyType & key, ValueType * value, KeyComparator & cmp) -> bool;
 
 
  public:
