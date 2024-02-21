@@ -14,8 +14,12 @@ INDEXITERATOR_TYPE::IndexIterator() {
 
 INDEX_TEMPLATE_ARGUMENTS
 INDEXITERATOR_TYPE::IndexIterator(BufferPoolManager *bpm, page_id_t page_id, int start_index): bpm_(bpm), cursor_(start_index) {
-    Page* page_data = bpm->FetchPage(page_id);
-    page_ = reinterpret_cast<LeafPage*>(page_data->GetData());
+    if (page_id==INVALID_PAGE_ID) {
+        cursor_ = -1;
+    }else{
+        Page* page_data = bpm->FetchPage(page_id);
+        page_ = reinterpret_cast<LeafPage*>(page_data->GetData());
+    }
 }
 
 
@@ -23,11 +27,22 @@ INDEX_TEMPLATE_ARGUMENTS
 INDEXITERATOR_TYPE::~IndexIterator() = default;  // NOLINT
 
 INDEX_TEMPLATE_ARGUMENTS
-auto INDEXITERATOR_TYPE::IsEnd() -> bool { 
+auto INDEXITERATOR_TYPE::IsEnd() const -> bool { 
+    if ( cursor_== -1) {
+        return true;
+    }
     if (page_->GetNextPageId()==INVALID_PAGE_ID && cursor_ == this->page_->GetSize()) {
         return true;
     }
     return false;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto INDEXITERATOR_TYPE::operator==(const IndexIterator &itr) const -> bool {
+if (IsEnd() && itr.IsEnd()) {
+    return true;
+}
+return itr.page_->GetPageId() == this->page_->GetPageId() && itr.cursor_==this->cursor_;
 }
 
 INDEX_TEMPLATE_ARGUMENTS

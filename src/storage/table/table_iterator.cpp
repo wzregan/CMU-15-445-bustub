@@ -21,7 +21,7 @@ namespace bustub {
 TableIterator::TableIterator(TableHeap *table_heap, RID rid, Transaction *txn)
     : table_heap_(table_heap), tuple_(new Tuple(rid)), txn_(txn) {
   if (rid.GetPageId() != INVALID_PAGE_ID) {
-    if (!table_heap_->GetTuple(tuple_->rid_, tuple_, txn_)) {
+     if (!table_heap_->GetTuple(tuple_->rid_, tuple_, txn_)) {
       throw bustub::Exception("read non-existing tuple");
     }
   }
@@ -38,7 +38,9 @@ auto TableIterator::operator->() -> Tuple * {
 }
 
 auto TableIterator::operator++() -> TableIterator & {
+  // 首先获取bpm
   BufferPoolManager *buffer_pool_manager = table_heap_->buffer_pool_manager_;
+  // 从bpm获取数据页
   auto cur_page = static_cast<TablePage *>(buffer_pool_manager->FetchPage(tuple_->rid_.GetPageId()));
   BUSTUB_ENSURE(cur_page != nullptr, "BPM full");  // all pages are pinned
 

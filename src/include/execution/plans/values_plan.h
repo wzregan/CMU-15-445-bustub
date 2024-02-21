@@ -40,7 +40,7 @@ class ValuesPlanNode : public AbstractPlanNode {
 
   /** @return The type of the plan node */
   auto GetType() const -> PlanType override { return PlanType::Values; }
-
+  
   auto GetValues() const -> const std::vector<std::vector<AbstractExpressionRef>> & { return values_; }
 
   BUSTUB_PLAN_NODE_CLONE_WITH_CHILDREN(ValuesPlanNode);

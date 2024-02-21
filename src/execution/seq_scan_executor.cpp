@@ -14,10 +14,33 @@
 
 namespace bustub {
 
-SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan) : AbstractExecutor(exec_ctx) {}
+SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan) : AbstractExecutor(exec_ctx), plan_(plan){
+}
+SeqScanExecutor::~SeqScanExecutor() {
+}
 
-void SeqScanExecutor::Init() { throw NotImplementedException("SeqScanExecutor is not implemented"); }
+void SeqScanExecutor::Init() { 
+    ExecutorContext * ec = this->GetExecutorContext();
+    
+    Catalog * catalog = ec->GetCatalog();
+    
+    table_oid_t table_oid = plan_->GetTableOid();
 
-auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool { return false; }
+    TableInfo * table_info = catalog->GetTable(table_oid);
+    cursor_ = std::make_shared<TableIterator>(table_info->table_->Begin(ec->GetTransaction()));
+    end_ = std::make_shared<TableIterator>(table_info->table_->End());
+}
+
+auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool { 
+    if ((*cursor_)==(*end_)) {
+        return false;
+    }
+    *tuple = (*(*cursor_));
+    *rid = tuple->GetRid();
+    (*cursor_)++;
+    return true; 
+}
+
+
 
 }  // namespace bustub

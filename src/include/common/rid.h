@@ -20,6 +20,7 @@
 
 namespace bustub {
 
+// 可以视为Recard ID，即该记录所在的page，以及该记录所在的slot_nub
 class RID {
  public:
   /** The default constructor creates an invalid RID! */

@@ -32,7 +32,7 @@ class SeqScanPlanNode : public AbstractPlanNode {
   /**
    * Construct a new SeqScanPlanNode instance.
    * @param output The output schema of this sequential scan plan node
-   * @param table_oid The identifier of table to be scanned
+  * @param table_oid The identifier of table to be scanned
    */
   SeqScanPlanNode(SchemaRef output, table_oid_t table_oid, std::string table_name,
                   AbstractExpressionRef filter_predicate = nullptr)

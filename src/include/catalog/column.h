@@ -26,6 +26,7 @@
 namespace bustub {
 class AbstractExpression;
 
+// 一张表的列
 class Column {
   friend class Schema;
 
@@ -35,7 +36,7 @@ class Column {
    * @param column_name name of the column
    * @param type type of the column
    */
-  Column(std::string column_name, TypeId type)
+  Column(std::string column_name, TypeId type) // 列名，列类型
       : column_name_(std::move(column_name)), column_type_(type), fixed_length_(TypeSize(type)) {
     BUSTUB_ASSERT(type != TypeId::VARCHAR, "Wrong constructor for VARCHAR type.");
   }

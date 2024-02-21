@@ -37,6 +37,7 @@ using index_oid_t = uint32_t;
 
 /**
  * The TableInfo class maintains metadata about a table.
+ * 主要是用来描述一张表的，比如模式schema，表命、
  */
 struct TableInfo {
   /**

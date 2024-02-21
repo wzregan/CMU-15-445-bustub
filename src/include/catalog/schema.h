@@ -26,23 +26,28 @@ namespace bustub {
 class Schema;
 using SchemaRef = std::shared_ptr<const Schema>;
 
+// 模式类，实际上就是column的集合。 
 class Schema {
  public:
   /**
    * Constructs the schema corresponding to the vector of columns, read left-to-right.
    * @param columns columns that describe the schema's individual columns
    */
+  // 使用Column来构建
   explicit Schema(const std::vector<Column> &columns);
 
+  // 拷贝模式
   static auto CopySchema(const Schema *from, const std::vector<uint32_t> &attrs) -> Schema {
     std::vector<Column> cols;
     cols.reserve(attrs.size());
     for (const auto i : attrs) {
       cols.emplace_back(from->columns_[i]);
     }
+    // 在调用构造函数
     return Schema{cols};
   }
-
+  
+  // 获取该模式所有的列
   /** @return all the columns in the schema */
   auto GetColumns() const -> const std::vector<Column> & { return columns_; }
 
@@ -51,6 +56,7 @@ class Schema {
    * @param col_idx index of requested column
    * @return requested column
    */
+  // 根据idx获取指定的列
   auto GetColumn(const uint32_t col_idx) const -> const Column & { return columns_[col_idx]; }
 
   /**
@@ -59,6 +65,7 @@ class Schema {
    * @param col_name name of column to look for
    * @return the index of a column with the given name, throws an exception if it does not exist
    */
+  // 根据列名来获取指定的列
   auto GetColIdx(const std::string &col_name) const -> uint32_t {
     if (auto col_idx = TryGetColIdx(col_name)) {
       return *col_idx;
@@ -72,6 +79,7 @@ class Schema {
    * @param col_name name of column to look for
    * @return the index of a column with the given name, `std::nullopt` if it does not exist
    */
+  // 遍历所有的当前colname
   auto TryGetColIdx(const std::string &col_name) const -> std::optional<uint32_t> {
     for (uint32_t i = 0; i < columns_.size(); ++i) {
       if (columns_[i].GetName() == col_name) {
@@ -80,7 +88,7 @@ class Schema {
     }
     return std::nullopt;
   }
-
+  
   /** @return the indices of non-inlined columns */
   auto GetUnlinedColumns() const -> const std::vector<uint32_t> & { return uninlined_columns_; }
 

@@ -28,15 +28,13 @@ class IndexIterator {
   IndexIterator(BufferPoolManager *bpm, page_id_t page_id, int start_index);
   ~IndexIterator();  // NOLINT
 
-  auto IsEnd() -> bool;
+  auto IsEnd() const -> bool;
 
   auto operator*() -> const MappingType &;
 
   auto operator++() -> IndexIterator &;
 
-  auto operator==(const IndexIterator &itr) const -> bool {
-    return itr.page_->GetPageId() == this->page_->GetPageId() && itr.cursor_==this->cursor_;
-  }
+  auto operator==(const IndexIterator &itr) const -> bool;
 
   auto operator!=(const IndexIterator &itr) const -> bool {
     return !(this->operator==(itr));
@@ -47,6 +45,7 @@ class IndexIterator {
   BufferPoolManager *bpm_;
   LeafPage * page_;
   int cursor_;
+  
 };
 
 }  // namespace bustub

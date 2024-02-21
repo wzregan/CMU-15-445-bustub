@@ -461,7 +461,6 @@ void BPLUSTREE_TYPE::UpdateNode(PageNode *update_node) {
 
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
-  int ould_f = fetch_count, old_unpin = unpin_count;
   // 1. 找到key所在的叶子节点
   int idx;
   // page_node不会为空，定位key所在的那个叶子节点
@@ -490,7 +489,6 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
   }
   // 开始修复结点
   FixInternalNode(leaf_node, key);
-  std::cout<<"out:"<<fetch_count - ould_f<<","<<unpin_count - old_unpin<<"\n";
 
   return;
 
@@ -620,6 +618,9 @@ auto BPLUSTREE_TYPE::Merge(PageNode * mergein, const KeyType & deleted_key) -> I
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
+  if (root_page_id_==INVALID_PAGE_ID)  {
+      return End();
+  }
   // page_node不会为空
   BPlusTreePage * node = FetchPageNode<BPlusTreePage>(root_page_id_);
   while (!node->IsLeafPage()) {
@@ -643,7 +644,10 @@ auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE { 
-    // page_node不会为空
+  if (root_page_id_==INVALID_PAGE_ID) {
+    return End();
+  }
+  // page_node不会为空
   int cursor = 0;
   LeafPage *leaf_node = LocatePage(key, &cursor);
   leaf_node->BinarySearch(key, &cursor, comparator_);
@@ -658,6 +662,9 @@ auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE {
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE { 
+  if(root_page_id_==INVALID_PAGE_ID) {
+      return INDEXITERATOR_TYPE(buffer_pool_manager_, INVALID_PAGE_ID, -1);
+  }
   BPlusTreePage * node = FetchPageNode<BPlusTreePage>(root_page_id_);
   while (!node->IsLeafPage()) {
     // page_node不是叶子节点，所以page_node可以转化为中间结点
