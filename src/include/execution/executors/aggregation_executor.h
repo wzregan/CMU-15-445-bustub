@@ -30,6 +30,7 @@ namespace bustub {
 
 /**
  * A simplified hash table that has all the necessary functionality for aggregations.
+ * 专门用来进行统计group数据的工具类
  */
 class SimpleAggregationHashTable {
  public:
@@ -40,7 +41,8 @@ class SimpleAggregationHashTable {
    */
   SimpleAggregationHashTable(const std::vector<AbstractExpressionRef> &agg_exprs,
                              const std::vector<AggregationType> &agg_types)
-      : agg_exprs_{agg_exprs}, agg_types_{agg_types} {}
+      : agg_exprs_{agg_exprs}, agg_types_{agg_types} {
+      }
 
   /** @return The initial aggregrate value for this aggregation executor */
   auto GenerateInitialAggregateValue() -> AggregateValue {
@@ -72,12 +74,46 @@ class SimpleAggregationHashTable {
    */
   void CombineAggregateValues(AggregateValue *result, const AggregateValue &input) {
     for (uint32_t i = 0; i < agg_exprs_.size(); i++) {
+      Value v = input.aggregates_[i];
+      Value one_value = Value(INTEGER, 1);
+      if (v.IsNull()) {
+        continue;
+      }
       switch (agg_types_[i]) {
         case AggregationType::CountStarAggregate:
+          if (result->aggregates_[i].IsNull()) {
+            result->aggregates_[i] = one_value;
+          }else {
+            result->aggregates_[i] = result->aggregates_[i].Add(one_value);
+          }
+          break;
         case AggregationType::CountAggregate:
+          if (result->aggregates_[i].IsNull()) {
+            result->aggregates_[i] = one_value;
+          }else {
+            result->aggregates_[i] = result->aggregates_[i].Add(one_value);
+          }
+          break;
         case AggregationType::SumAggregate:
+          if (result->aggregates_[i].IsNull()) {
+            result->aggregates_[i] = v;
+          }else {
+            result->aggregates_[i] = result->aggregates_[i].Add(v);
+          }
+          break;
         case AggregationType::MinAggregate:
+          if (result->aggregates_[i].IsNull()) {
+            result->aggregates_[i] = v;
+          }else {
+            result->aggregates_[i] = result->aggregates_[i].Min(v);
+          }
+          break;
         case AggregationType::MaxAggregate:
+          if (result->aggregates_[i].IsNull()) {
+            result->aggregates_[i] = v;
+          }else {
+            result->aggregates_[i] = result->aggregates_[i].Max(v);
+          }
           break;
       }
     }
@@ -94,6 +130,10 @@ class SimpleAggregationHashTable {
     }
     CombineAggregateValues(&ht_[agg_key], agg_val);
   }
+  auto InitOneNullLine() {
+    ht_.insert({AggregateKey{}, GenerateInitialAggregateValue()});
+  }
+
 
   /**
    * Clear the hash table
@@ -201,8 +241,10 @@ class AggregationExecutor : public AbstractExecutor {
   /** The child executor that produces tuples over which the aggregation is computed */
   std::unique_ptr<AbstractExecutor> child_;
   /** Simple aggregation hash table */
-  // TODO(Student): Uncomment SimpleAggregationHashTable aht_;
-  /** Simple aggregation hash table iterator */
-  // TODO(Student): Uncomment SimpleAggregationHashTable::Iterator aht_iterator_;
+  /** Simple aggregation hash table iterator */;
+  std::shared_ptr<SimpleAggregationHashTable::Iterator> cursor_;
+  std::shared_ptr<SimpleAggregationHashTable::Iterator> end_;
+  std::shared_ptr<SimpleAggregationHashTable> aggregation_hash_tab_;
+
 };
 }  // namespace bustub
