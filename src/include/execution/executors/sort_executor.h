@@ -27,6 +27,32 @@ namespace bustub {
  * The SortExecutor executor executes a sort.
  */
 class SortExecutor : public AbstractExecutor {
+class CMP{
+public:
+    CMP(){
+      
+    }
+public:
+    bool operator()(std::pair<std::vector<std::pair<Value, OrderByType>>, Tuple> a, std::pair<std::vector<std::pair<Value, OrderByType>>, Tuple> b){
+      for (unsigned int i = 0; i < a.first.size(); i++) {
+        OrderByType ordertype_ = a.first[i].second;
+        Value va = a.first[i].first;
+        Value vb = b.first[i].first;
+        if (ordertype_==OrderByType::DEFAULT || ordertype_==OrderByType::ASC) {
+            if (va.CompareEquals(vb)==CmpBool::CmpTrue){
+              continue;
+            }
+            return va.CompareLessThan(vb)==CmpBool::CmpTrue;
+        }else if (ordertype_==OrderByType::DESC) {
+            if (va.CompareEquals(vb)==CmpBool::CmpTrue){
+              continue;
+            }
+            return va.CompareGreaterThan(vb)==CmpBool::CmpTrue;
+        }
+      }
+      return true;
+    }
+  };
  public:
   /**
    * Construct a new SortExecutor instance.
@@ -52,5 +78,9 @@ class SortExecutor : public AbstractExecutor {
  private:
   /** The sort plan node to be executed */
   const SortPlanNode *plan_;
+  OrderByType order_type;
+  std::vector<std::pair<std::vector<std::pair<Value, OrderByType>>, Tuple>> buffer_;
+  std::unique_ptr<AbstractExecutor> child_executor_;
+  unsigned int cursor_;
 };
 }  // namespace bustub
