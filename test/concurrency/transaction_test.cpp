@@ -68,7 +68,7 @@ void CheckTxnRowLockSize(Transaction *txn, size_t shared_size, size_t exclusive_
 }
 
 // NOLINTNEXTLINE
-TEST_F(TransactionTest, DISABLED_SimpleInsertRollbackTest) {
+TEST_F(TransactionTest, ENABLE_SimpleInsertRollbackTest) {
   // txn1: INSERT INTO empty_table2 VALUES (200, 20), (201, 21), (202, 22)
   // txn1: abort
   // txn2: SELECT * FROM empty_table2;

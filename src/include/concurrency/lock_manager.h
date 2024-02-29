@@ -36,7 +36,24 @@ class TransactionManager;
 class LockManager {
  public:
   enum class LockMode { SHARED, EXCLUSIVE, INTENTION_SHARED, INTENTION_EXCLUSIVE, SHARED_INTENTION_EXCLUSIVE };
-
+  std::unordered_map<LockMode, std::unordered_set<LockMode>> compatible_map{
+    {LockMode::SHARED,{LockMode::SHARED}},
+    {LockMode::EXCLUSIVE,{}},
+    {LockMode::INTENTION_SHARED,{LockMode::INTENTION_SHARED, LockMode::INTENTION_EXCLUSIVE, LockMode::SHARED_INTENTION_EXCLUSIVE, LockMode::SHARED}},
+    {LockMode::INTENTION_EXCLUSIVE,{LockMode::INTENTION_SHARED, LockMode::INTENTION_EXCLUSIVE, LockMode::SHARED_INTENTION_EXCLUSIVE, LockMode::SHARED}},
+    {LockMode::SHARED_INTENTION_EXCLUSIVE,{LockMode::INTENTION_SHARED, LockMode::SHARED}}
+  };
+  std::unordered_map<LockMode, std::unordered_set<LockMode>> upgrade_map{
+    {LockMode::SHARED,{LockMode::EXCLUSIVE}},
+    {LockMode::INTENTION_SHARED,{LockMode::INTENTION_EXCLUSIVE, LockMode::SHARED_INTENTION_EXCLUSIVE, LockMode::SHARED, LockMode::EXCLUSIVE}},
+    {LockMode::INTENTION_EXCLUSIVE,{ LockMode::SHARED_INTENTION_EXCLUSIVE, LockMode::EXCLUSIVE}},
+    {LockMode::SHARED_INTENTION_EXCLUSIVE,{LockMode::EXCLUSIVE}}
+  };
+  std::unordered_map<LockMode, LockMode> lock_intention_map{
+    {LockMode::EXCLUSIVE, LockMode::INTENTION_EXCLUSIVE},
+    {LockMode::SHARED, LockMode::INTENTION_SHARED}
+  };
+  std::unordered_map<txn_id_t, std::vector<std::pair<txn_id_t, txn_id_t>>> edges_map_; 
   /**
    * Structure to hold a lock request.
    * This could be a lock request on a table OR a row.
@@ -63,6 +80,9 @@ class LockManager {
 
   class LockRequestQueue {
    public:
+    void wait();
+    void notify_one();
+   public:
     /** List of lock requests for the same resource (table or row) */
     std::list<LockRequest *> request_queue_;
     /** For notifying blocked transactions on this rid */
@@ -86,7 +106,7 @@ class LockManager {
     cycle_detection_thread_->join();
     delete cycle_detection_thread_;
   }
-
+  bool IsLockCompatible(LockMode lock1, LockMode lock2);
   /**
    * [LOCK_NOTE]
    *
@@ -297,6 +317,16 @@ class LockManager {
    */
   auto RunCycleDetection() -> void;
 
+  auto AddLockModeCount(Transaction *txn, LockMode lock_mode, const table_oid_t &oid) -> void;
+  auto CutDownLockModeCount(Transaction *txn, LockMode lock_mode, const table_oid_t &oid) -> void;
+  
+  auto AddLockRowModeCount(Transaction *txn, LockMode lock_mode, const table_oid_t &oid, const RID &rid) -> void;
+  auto CutDownRowLockModeCount(Transaction *txn, LockMode lock_mode, const table_oid_t &oid, const RID &rid) -> void;
+  
+  auto HasLockOnTable(Transaction *txn, LockMode lock_mode, const table_oid_t & oid) -> bool;
+  auto HasLockOnRow(Transaction *txn, LockMode lock_mode, const table_oid_t & oid, const RID &rid) -> bool;
+  auto HasCycle_(txn_id_t *result, txn_id_t txn_id, std::unordered_set<txn_id_t>& visited_id) -> bool;
+
  private:
   /** Fall 2022 */
   /** Structure that holds lock requests for a given table oid */
@@ -308,7 +338,6 @@ class LockManager {
   std::unordered_map<RID, std::shared_ptr<LockRequestQueue>> row_lock_map_;
   /** Coordination */
   std::mutex row_lock_map_latch_;
-
   std::atomic<bool> enable_cycle_detection_;
   std::thread *cycle_detection_thread_;
   /** Waits-for graph representation. */
