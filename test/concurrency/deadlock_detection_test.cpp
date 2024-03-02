@@ -79,17 +79,17 @@ TEST(LockManagerDeadlockDetectionTest, ENABLE_BasicDeadlockDetectionTest) {
   std::thread t0([&] {
     // Lock and sleep
     bool res = lock_mgr.LockTable(txn0, LockManager::LockMode::INTENTION_EXCLUSIVE, toid);
-    // std::cout<<"t0 lock.. table toid\n";
+    std::cout<<"t0 lock.. table toid\n";
     EXPECT_EQ(true, res);
     res = lock_mgr.LockRow(txn0, LockManager::LockMode::EXCLUSIVE, toid, rid0);
-    // std::cout<<"t0 lock.. row rid0\n";
+    std::cout<<"t0 lock.. row rid0\n";
     EXPECT_EQ(true, res);
     EXPECT_EQ(TransactionState::GROWING, txn1->GetState());
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // This will block
     res = lock_mgr.LockRow(txn0, LockManager::LockMode::EXCLUSIVE, toid, rid1);
-    // std::cout<<"t0 lock.. row rid1\n";
+    std::cout<<"t0 lock.. row rid1\n";
     EXPECT_EQ(true, res);
 
     lock_mgr.UnlockRow(txn0, toid, rid1);
@@ -104,17 +104,17 @@ TEST(LockManagerDeadlockDetectionTest, ENABLE_BasicDeadlockDetectionTest) {
     // Sleep so T0 can take necessary locks
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     bool res = lock_mgr.LockTable(txn1, LockManager::LockMode::INTENTION_EXCLUSIVE, toid);
-    // std::cout<<"t1 lock.. table toid\n";
+    std::cout<<"t1 lock.. table toid\n";
     EXPECT_EQ(res, true);
 
     res = lock_mgr.LockRow(txn1, LockManager::LockMode::EXCLUSIVE, toid, rid1);
-      // std::cout<<"t1 lock.. row rid1\n";
+      std::cout<<"t1 lock.. row rid1\n";
 
     EXPECT_EQ(TransactionState::GROWING, txn1->GetState());
 
     // This will block
     res = lock_mgr.LockRow(txn1, LockManager::LockMode::EXCLUSIVE, toid, rid0);
-    // std::cout<<"t1 lock.. row rid0\n";
+    std::cout<<"t1 lock.. row rid0\n";
     EXPECT_EQ(res, false);
 
     EXPECT_EQ(TransactionState::ABORTED, txn1->GetState());

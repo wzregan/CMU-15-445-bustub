@@ -63,7 +63,8 @@ class InsertExecutor : public AbstractExecutor {
   TableInfo * table_info_;
   std::vector<IndexInfo*> index_infos_;
   std::unique_ptr<AbstractExecutor> child_executor_;
-  
+  LockManager *lock_manager_{nullptr};
+  Transaction * txn{nullptr};
 };
 
 }  // namespace bustub

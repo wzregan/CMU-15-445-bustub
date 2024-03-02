@@ -63,5 +63,8 @@ class DeleteExecutor : public AbstractExecutor {
   TableInfo *tab_info_;
   std::vector<IndexInfo*> idx_infos_;
   bool exit_;
+  LockManager *lock_manager_{nullptr};
+  Transaction * txn{nullptr};
+
 };
 }  // namespace bustub

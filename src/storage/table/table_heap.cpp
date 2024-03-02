@@ -100,8 +100,7 @@ auto TableHeap::MarkDelete(const RID &rid, Transaction *txn) -> bool {
     txn->SetState(TransactionState::ABORTED);
     return false;
   }
-  // Otherwise, mark the tuple as deleted.
-  page->WLatch();
+   page->WLatch();
   page->MarkDelete(rid, txn, lock_manager_, log_manager_);
   page->WUnlatch();
   buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);

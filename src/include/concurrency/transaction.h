@@ -62,6 +62,7 @@ using index_oid_t = uint32_t;
 /**
  * WriteRecord tracks information related to a write.
  */
+// 向数据库中写数据的记录
 class TableWriteRecord {
  public:
   TableWriteRecord(RID rid, WType wtype, const Tuple &tuple, TableHeap *table)
@@ -78,6 +79,7 @@ class TableWriteRecord {
 /**
  * WriteRecord tracks information related to a write.
  */
+// 对索引的修改也要记录下来
 class IndexWriteRecord {
  public:
   IndexWriteRecord(RID rid, table_oid_t table_oid, WType wtype, const Tuple &tuple, index_oid_t index_oid,

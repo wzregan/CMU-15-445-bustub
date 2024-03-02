@@ -172,7 +172,7 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
 	// 如果这个事务的锁不兼容
     if (!IsLockCompatible((*iter)->lock_mode_, request->lock_mode_) && (*iter)->txn_id_!=request->txn_id_) {
       table_lock_map_latch_.unlock();
-	  table_lock_map_[oid]->wait();
+	  table_lock_map_[oid]->wait(txn);
 	  table_lock_map_latch_.lock();
       iter = table_lock_map_[oid]->request_queue_.begin();
     }else {
@@ -274,11 +274,10 @@ auto LockManager::LockRow(Transaction *txn, LockMode lock_mode, const table_oid_
 		row_lock_map_[rid]->request_queue_.erase(old_iter);
 		continue;
 	}
-	
 	// 如果这个事务的锁不兼容
     if (!IsLockCompatible((*iter)->lock_mode_, request->lock_mode_) && (*iter)->txn_id_!=request->txn_id_) {
       row_lock_map_latch_.unlock();
-	  row_lock_map_[rid]->wait();
+	  row_lock_map_[rid]->wait(txn);
 	  row_lock_map_latch_.lock();
       iter = row_lock_map_[rid]->request_queue_.begin();
     }else {
@@ -508,7 +507,7 @@ void LockManager::RunCycleDetection() {
   }
 }
 
-void LockManager::LockRequestQueue::wait() {
+void LockManager::LockRequestQueue::wait(Transaction * txn) {
   auto lock = std::unique_lock(this->latch_);
   this->cv_.wait(lock);
 }
@@ -522,4 +521,5 @@ bool LockManager::IsLockCompatible(LockMode lock1, LockMode lock2) {
   return false;
 }
 
-}  // namespace bustub
+}
+ 

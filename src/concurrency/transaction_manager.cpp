@@ -24,6 +24,7 @@ namespace bustub {
 std::unordered_map<txn_id_t, Transaction *> TransactionManager::txn_map = {};
 std::shared_mutex TransactionManager::txn_map_mutex = {};
 
+// 新建一个事务
 auto TransactionManager::Begin(Transaction *txn, IsolationLevel isolation_level) -> Transaction * {
   // Acquire the global transaction latch in shared mode.
   global_txn_latch_.RLock();
@@ -42,7 +43,7 @@ auto TransactionManager::Begin(Transaction *txn, IsolationLevel isolation_level)
   txn_map[txn->GetTransactionId()] = txn;
   return txn;
 }
-
+// 事务的提交，如果事务中涉及到表的删除之类的，那么就需要把删除应用一下，因为之前的删除操作只是一种标记           
 void TransactionManager::Commit(Transaction *txn) {
   txn->SetState(TransactionState::COMMITTED);
 
@@ -64,7 +65,7 @@ void TransactionManager::Commit(Transaction *txn) {
   // Release the global transaction latch.
   global_txn_latch_.RUnlock();
 }
-
+// 如果事务中断，则需要把事务期间做的操作相反的做一遍即可。
 void TransactionManager::Abort(Transaction *txn) {
   txn->SetState(TransactionState::ABORTED);
   // Rollback before releasing the lock.

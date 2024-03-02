@@ -53,6 +53,8 @@ class SeqScanExecutor : public AbstractExecutor {
   ExecutorContext *exec_ctx_;
   std::shared_ptr<TableIterator> cursor_;
   std::shared_ptr<TableIterator> end_;
-
+  LockManager * lock_manager_;
+  Transaction * txn;
+  TableInfo * table_info;
 };
 }  // namespace bustub

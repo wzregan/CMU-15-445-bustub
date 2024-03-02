@@ -80,7 +80,7 @@ class LockManager {
 
   class LockRequestQueue {
    public:
-    void wait();
+    void wait(Transaction *);
     void notify_one();
    public:
     /** List of lock requests for the same resource (table or row) */

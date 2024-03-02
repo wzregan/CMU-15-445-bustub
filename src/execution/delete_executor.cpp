@@ -19,8 +19,8 @@ namespace bustub {
 DeleteExecutor::DeleteExecutor(ExecutorContext *exec_ctx, const DeletePlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
     : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)){
-
-
+        lock_manager_ = GetExecutorContext()->GetLockManager();
+        txn = GetExecutorContext()->GetTransaction();
     }
 
 void DeleteExecutor::Init() { 
@@ -29,6 +29,9 @@ void DeleteExecutor::Init() {
     child_executor_->Init();
     idx_infos_ = catalog->GetTableIndexes(tab_info_->name_);
     exit_ = false;
+
+    lock_manager_->LockTable(txn, LockManager::LockMode::INTENTION_EXCLUSIVE, tab_info_->oid_);
+
 }
 
 auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool { 
@@ -39,7 +42,16 @@ auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     Tuple deleted_tuple = {};
     RID deleted_rid = {};
     while (child_executor_->Next(&deleted_tuple, &deleted_rid)) {
+        // 加锁
+        lock_manager_->LockRow(txn, LockManager::LockMode::EXCLUSIVE, tab_info_->oid_, deleted_tuple.GetRid());
+
         tab_info_->table_->MarkDelete(deleted_rid, exec_ctx_->GetTransaction());
+ 
+        // 解锁
+        if (txn->GetIsolationLevel()==IsolationLevel::READ_COMMITTED || txn->GetIsolationLevel()==IsolationLevel::READ_UNCOMMITTED) {
+            lock_manager_->UnlockRow(txn, tab_info_->oid_, deleted_tuple.GetRid());
+        }
+
         delete_count++;
         // 然后更新索引树
         for  (auto index: idx_infos_) {
@@ -54,7 +66,6 @@ auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
                 // 4. 获取建立索引的那个Column
                 Column column = key_schema->GetColumn(i);
                 // 5. 然后获取column在表中的列
-                
                 int col_idx = tab_info_->schema_.GetColIdx(column.GetName());
                 // 6. 然后获取值
                 Value v = deleted_tuple.GetValue(&tab_info_->schema_, col_idx);
@@ -63,7 +74,10 @@ auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
             // 7. 插入到索引树里
             auto delete_key = Tuple(index_values, key_schema);
             index->index_->DeleteEntry(delete_key, *rid, GetExecutorContext()->GetTransaction());
+            
         }
+
+
 
     }
     // 要返回删除了多少条
